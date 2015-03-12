@@ -25,6 +25,10 @@ CEL=$(awk 'BEGIN { print "\302\260C"; }')
 if [ -d "/sys/devices/platform/sunxi-i2c.0/i2c-0/0-0034/" ]; then
 TEMP=$(cat /sys/devices/platform/sunxi-i2c.0/i2c-0/0-0034/temp1_input)
 TEMP=$(echo "scale=1;${TEMP}/1000" | bc)  
+# if we are reading A20 temp with daemon
+if [ -f "/run/soc-temp" ]; then 
+TEMP=$(cat /run/soc-temp)
+fi
 OUT="${OUT}- Board: ${TEMP}${CEL} "
 fi
 
@@ -32,8 +36,13 @@ if [[ -n $TEMPER ]]; then
 OUT=$OUT"${TEMPER}${CEL} "
 fi
 
+if [ "$(cat /proc/partitions |grep sd)" != "" ];then
+SDA_TYPE=$(/sbin/udevadm info --query=all --name=sda | grep ID_BUS=)
+SDA_TYPE=${SDA_TYPE#*=}
+fi
+
 # if we have a hard drive
-if [ -e '/dev/sda' ]; then
+if [[ -e '/dev/sda' && $SDA_TYPE == "ata" ]] ; then
    HDDTEMP=$(/usr/sbin/hddtemp /dev/sda 2>&1)
    if [ $? -eq 0 ]; then
        HDDTEMP=$(echo ${HDDTEMP} | awk '{print $NF}')
