@@ -4,11 +4,19 @@
 
 4. Well documented, maintained & easy to use
 5. Boot loaders and kernel images are compiled and cached.
+
 ```bash
 #!/bin/bash
 # 
 # Edit and execute this script - Ubuntu 14.04 x86/64 recommended
 #
+
+BOARD="lime2"	# lime (512Mb), lime2 (1024Mb), micro (1024Mb)
+RELEASE="wheezy" # jessie or wheezy
+BRANCH="default"	# default=3.4.x, mainline=next
+# numbers
+SDSIZE="1200" # SD image size in MB
+REVISION="1.4" # image release version
 
 # method
 SOURCE_COMPILE="yes"						# force source compilation: yes / no
@@ -25,7 +33,7 @@ MAINTAINERMAIL="igor.pecovnik@****l.com"	# deb signature
     
 # advanced
 KERNELTAG="v3.19"							# which kernel version - valid only for mainline
-FBTFT="yes"									# https://github.com/notro/fbtft 
+FBTFT="no"									# https://github.com/notro/fbtft 
 EXTERNAL="yes"								# compile extra drivers`
 
 #---------------------------------------------------------------------------------------
@@ -37,15 +45,15 @@ SRC=$(pwd)
 DEST=$(pwd)/output                      		      	
 
 # get updates of the main build libraries
-if [ -d "$SRC/lib" ]; then
-	cd $SRC/lib
+if [ -d "$SRC/Lime2-Debian-Builder" ]; then
+	cd $SRC/Lime2-Debian-Builder
 	git pull 
 else
 	# download SDK
 	apt-get -y -qq install git
-	git clone https://github.com/igorpecovnik/lib
+	git clone https://github.com/JHSawatzki/Lime2-Debian-Builder
 fi
 
-source $SRC/lib/main.sh
+source $SRC/Lime2-Debian-Builder/main.sh
 #---------------------------------------------------------------------------------------
 ```
