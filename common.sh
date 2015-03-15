@@ -50,8 +50,8 @@ install_board_specific (){
 	if [[ $TMESLOGGER_INSTALL == "yes" ]]; then
 		echo 'echo ds1307 0x68 > /sys/class/i2c-adapter/i2c-2/new_device' >> /tmp/out
 		echo 'hwclock -s' >> /tmp/out
-		echo 'echo none > /sys/class/leds/green\:ph2\:led1/trigger' >> /tmp/out
-		echo 'echo 255 > /sys/class/leds/green\:ph2\:led1/brightness' >> /tmp/out
+		echo 'echo none > /sys/class/leds/green\:ph02\:led1/trigger' >> /tmp/out
+		echo 'echo 255 > /sys/class/leds/green\:ph02\:led1/brightness' >> /tmp/out
 	fi
 
 	echo 'exit 0' >> /tmp/out
@@ -108,8 +108,6 @@ EOT
 
 	# copy and create symlink to default interfaces configuration
 	/bin/cp -f $SRC/Lime2-Debian-Builder/config/interfaces $DEST/sdcard/etc/network/
-	
-	ln -sf interfaces.default $DEST/sdcard/etc/network/interfaces
 
 	# install kernel
 	rm -rf /tmp/kernel && mkdir -p /tmp/kernel && cd /tmp/kernel
@@ -457,7 +455,7 @@ END
 		
 
 		# install aditional packages
-		PAKETE="automake bash-completion bc build-essential cmake cpufrequtils curl e2fsprogs evtest figlet fping git git-core haveged hddtemp hdparm htop i2c-tools iperf iotop less libtool libusb-1.0-0 libwrap0-dev libfuse2 libssl-dev logrotate lsof makedev module-init-tools nano ntp parted pkg-config pciutils pv python-smbus rsync screen stress sudo sysfsutils toilet u-boot-tools unzip usbutils wget"
+		PAKETE="automake bash-completion bc build-essential cmake cpufrequtils curl dosfstools e2fsprogs evtest figlet fping git git-core haveged hddtemp hdparm htop i2c-tools iperf iotop less libtool libusb-1.0-0 libwrap0-dev libfuse2 libssl-dev logrotate lsof makedev module-init-tools nano ntp parted pkg-config pciutils pv python-smbus rsync screen stress sudo sysfsutils toilet u-boot-tools unzip usbutils wget"
 		LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "debconf-apt-progress -- apt-get -y install $PAKETE"
 		
 		#TODO WIFI

@@ -68,9 +68,6 @@ case "$1" in
 		dpkg-reconfigure openssh-server 
 		set +e
 		
-		echo "Installing to SATA..."
-		/bin/bash /root/sata-install.sh
-		
 		#expanding rootfs
 		echo "Expanding rootfs..."
 		if do_expand_rootfs; then
