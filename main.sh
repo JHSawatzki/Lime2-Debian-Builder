@@ -76,7 +76,7 @@ echo "Building $VERSION."
 #--------------------------------------------------------------------------------------------------------------------------------
 # fetch_from_github [repository, sub directory]
 #--------------------------------------------------------------------------------------------------------------------------------
-mkdir -p $DEST/output
+mkdir -p $DEST
 fetch_from_github "$BOOTLOADER" "$BOOTSOURCE"
 fetch_from_github "$LINUXKERNEL" "$LINUXSOURCE"
 if [[ -n "$MISC1" ]]; then fetch_from_github "$MISC1" "$MISC1_DIR"; fi
@@ -104,7 +104,7 @@ if [ "$SOURCE_COMPILE" = "yes" ]; then
 else
 	# Compile u-boot if not exits in cache
 	CHOOSEN_UBOOT="$BOARD"_"$BRANCH"_u-boot_"$VER".tgz
-	if [ ! -f "$DEST/output/u-boot/$CHOOSEN_UBOOT" ]; then
+	if [ ! -f "$DEST/u-boot-image/$CHOOSEN_UBOOT" ]; then
 		compile_uboot
 	fi
 
@@ -145,7 +145,7 @@ install_external_applications
 #--------------------------------------------------------------------------------------------------------------------------------
 # add some summary to the image
 #--------------------------------------------------------------------------------------------------------------------------------
-fingerprint_image
+fingerprint_image "$DEST/sdcard/root/readme.txt"
 
 
 #--------------------------------------------------------------------------------------------------------------------------------
