@@ -807,13 +807,13 @@ closing_image (){
 	#--------------------------------------------------------------------------------------------------------------------------------
 	echo "------ Closing image"
 
-	rm $DEST/sdcard /usr/share/info/dir.old
+	rm $DEST/sdcard/usr/share/info/dir.old
 	rm $DEST/sdcard/var/cache/debconf/*.dat-old
 	rm $DEST/sdcard/var/log/{bootstrap,dpkg}.log
 	rm $DEST/sdcard/var/log/*.?
 	rm $DEST/sdcard/tmp/*
-	for a in $DEST/sdcard/var/log/{*.log,apt/*.log,debug,dmesg,faillog,messages,syslog,wtmp} do echo -n > $a; done
-	rm $DEST/sdcard/var/cache/apt/* 
+	for a in $DEST/sdcard/var/log/{*.log,apt/*.log,debug,dmesg,faillog,messages,syslog,wtmp}; do echo -n > $a; done
+	rm $DEST/sdcard/var/cache/apt/*
 	rm $DEST/sdcard/var/lib/apt/lists/*
 
 	rm $DEST/sdcard/etc/adjtime
