@@ -39,7 +39,7 @@ case "$1" in
 		
 		echo "Installing Labjack Exodriver..."
 		cd /root/exodriver-master
-		./install.sh
+		/bin/bash ./install.sh
 		cd /
 		rm -r /root/exodriver-master
 		
