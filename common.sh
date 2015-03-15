@@ -113,7 +113,7 @@ EOT
 
 	# install kernel
 	rm -rf /tmp/kernel && mkdir -p /tmp/kernel && cd /tmp/kernel
-	tar -xPf $DEST"/output/kernel/"$CHOOSEN_KERNEL
+	tar -xPf $DEST"/kernel/"$CHOOSEN_KERNEL
 	mount --bind /tmp/kernel/ $DEST/sdcard/tmp
 	chroot $DEST/sdcard /bin/bash -c "dpkg -i /tmp/*image*.deb"
 	chroot $DEST/sdcard /bin/bash -c "dpkg -i /tmp/*headers*.deb"
@@ -297,7 +297,7 @@ compile_uboot (){
 		mkdir -p $DEST/u-boot-image
 		#
 		CHOOSEN_UBOOT="$BOARD"_"$BRANCH"_u-boot_"$VER".tgz
-		tar cPfz $DEST"/output/u-boot-image/$CHOOSEN_UBOOT" u-boot-sunxi-with-spl.bin
+		tar cPfz $DEST"/u-boot-image/$CHOOSEN_UBOOT" u-boot-sunxi-with-spl.bin
 		#
 	else
 		echo "ERROR: Source file $1 does not exists. Check fetch_from_github configuration."
@@ -356,7 +356,7 @@ compile_kernel (){
 		# create tar archive of all deb files
 		mkdir -p $DEST/kernel
 		cd ..
-		tar -cPf $DEST"/output/kernel/"$VER"-"$CONFIG_LOCALVERSION$BOARD-$BRANCH".tar" *.deb
+		tar -cPf $DEST"/kernel/"$VER"-"$CONFIG_LOCALVERSION$BOARD-$BRANCH".tar" *.deb
 		rm *.deb
 		CHOOSEN_KERNEL=$VER"-"$CONFIG_LOCALVERSION$BOARD-$BRANCH".tar"
 
@@ -740,7 +740,7 @@ choosing_kernel (){
 	#--------------------------------------------------------------------------------------------------------------------------------
 	# Choose which kernel to use
 	#--------------------------------------------------------------------------------------------------------------------------------
-	cd $DEST"/output/kernel/"
+	cd $DEST"/kernel/"
 	if [[ $BRANCH == *next* ]]; then
 		MYLIST=`for x in $(ls -1 *next*.tar); do echo $x " -"; done`
 	else
@@ -852,7 +852,7 @@ closing_image (){
 	LOOP=$(losetup -f)
 	losetup $LOOP $DEST/debian_rootfs.raw
 	cd /tmp
-	tar xvfz $DEST"/output/u-boot-image/"$CHOOSEN_UBOOT
+	tar xvfz $DEST"/u-boot-image/"$CHOOSEN_UBOOT
 	dd if=u-boot-sunxi-with-spl.bin of=$LOOP bs=1024 seek=8 status=noxfer
 	sync
 	sleep 3
