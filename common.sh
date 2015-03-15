@@ -81,13 +81,19 @@ install_kernel (){
 
 	# set hostname in hosts file
 cat > $DEST/output/sdcard/etc/hosts <<EOT
-127.0.0.1   localhost $HOST
-::1         localhost $HOST ip6-localhost ip6-loopback
-fe00::0     ip6-localnet
-ff00::0     ip6-mcastprefix
-ff02::1     ip6-allnodes
-ff02::2     ip6-allrouters
+127.0.0.1   localhost
+127.0.1.1   $HOST
 EOT
+
+#cat > $DEST/output/sdcard/etc/hosts <<EOT
+#127.0.0.1   localhost
+#127.0.1.1   $HOST
+#::1         localhost $HOST ip6-localhost ip6-loopback
+#fe00::0     ip6-localnet
+#ff00::0     ip6-mcastprefix
+#ff02::1     ip6-allnodes
+#ff02::2     ip6-allrouters
+#EOT
 
 	# create modules file
 	if [[ $BRANCH == *next* ]];then
