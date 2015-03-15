@@ -20,78 +20,22 @@ fi
 
 
 #--------------------------------------------------------------------------------------------------------------------------------
-# Choose for which board you want to compile  								            
-#--------------------------------------------------------------------------------------------------------------------------------
-if [ "$BOARD" == "" ]; then
-	BOARDS="Cubieboard A10 Cubieboard2 A20 Cubietruck A20 Lime A20 Lime2 A20 Micro A20 Bananapi A20 Orangepi A20 Hummingbird A31 Cubox-i imx6 Udoo imx6";
-	MYLIST=`for x in $BOARDS; do echo $x ""; done`
-	whiptail --title "Choose a board" --backtitle "" --menu "\nWhich one?" 18 30 8 $MYLIST 2>results    
-	BOARD=$(<results)
-	BOARD=${BOARD,,}
-	rm results
-fi
-# exit the script on cancel
-if [ "$BOARD" == "" ]; then echo "ERROR: You have to choose one board"; exit; fi
-
-
-#--------------------------------------------------------------------------------------------------------------------------------
-# Choose for which distribution you want to compile  								            
-#--------------------------------------------------------------------------------------------------------------------------------
-if [ "$RELEASE" == "" ]; then
-	RELEASE="wheezy Debian jessie Debian trusty Ubuntu";
-	MYLIST=`for x in $RELEASE; do echo $x ""; done`
-	whiptail --backtitle "" --title "Select distribution" --menu "" 12 30 4 $MYLIST 2>results    
-	RELEASE=$(<results)
-	rm results
-fi
-# exit the script on cancel
-if [ "$RELEASE" == "" ]; then echo "ERROR: You have to choose one distribution"; exit; fi
-
-
-#--------------------------------------------------------------------------------------------------------------------------------
-# Choose for which branch you want to compile  								            
-#--------------------------------------------------------------------------------------------------------------------------------
-if [ "$BRANCH" == "" ]; then
-	BRANCH="default 3.4.x next mainline";
-	MYLIST=`for x in $BRANCH; do echo $x ""; done`
-	whiptail --backtitle "" --title "Select distribution" --menu "" 12 30 4 $MYLIST 2>results    
-	BRANCH=$(<results)
-	rm results
-fi
-# exit the script on cancel
-if [ "$BRANCH" == "" ]; then echo "ERROR: You have to choose one branch"; exit; fi
-
-
-#--------------------------------------------------------------------------------------------------------------------------------
-# check which distro we are building
-#--------------------------------------------------------------------------------------------------------------------------------
-if [ "$RELEASE" == "trusty" ]; then
-	DISTRIBUTION="Ubuntu"
-	else
-	DISTRIBUTION="Debian"
-fi
-
-
-#--------------------------------------------------------------------------------------------------------------------------------
-# Hostname
-#
-HOST="$BOARD"
-
-
-#--------------------------------------------------------------------------------------------------------------------------------
 # Load libraries
 #--------------------------------------------------------------------------------------------------------------------------------
-source $SRC/lib/configuration.sh			# Board configuration
-source $SRC/lib/boards.sh 					# Board specific install
-source $SRC/lib/common.sh 					# Functions 
+source $SRC/Lime2-Debian-Builder/configuration.sh			# Board configuration
+source $SRC/Lime2-Debian-Builder/boards.sh 					# Board specific install
+source $SRC/Lime2-Debian-Builder/common.sh 					# Functions
 
 
 #--------------------------------------------------------------------------------------------------------------------------------
 # The name of the job
 #--------------------------------------------------------------------------------------------------------------------------------
 VERSION="${BOARD^} $DISTRIBUTION $REVISION $RELEASE $BRANCH"
+if [[ $U6PRO == "yes" ]]; then
+	VERSION=$VERSION" U6Pro"
+fi
 
- 
+
 #--------------------------------------------------------------------------------------------------------------------------------
 # let's start with fresh screen
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -103,9 +47,9 @@ clear
 #--------------------------------------------------------------------------------------------------------------------------------
 CPUS=$(grep -c 'processor' /proc/cpuinfo)
 if [ "$USEALLCORES" = "yes" ]; then
-CTHREADS="-j$(($CPUS + $CPUS/2))";
+	CTHREADS="-j$(($CPUS + $CPUS/2))";
 else
-CTHREADS="-j${CPUS}";
+	CTHREADS="-j${CPUS}";
 fi
 
 
@@ -116,7 +60,7 @@ start=`date +%s`
 
 
 #--------------------------------------------------------------------------------------------------------------------------------
-# display what we are doing 
+# display what we are doing
 #--------------------------------------------------------------------------------------------------------------------------------
 echo "Building $VERSION."
 
@@ -135,12 +79,9 @@ echo "Building $VERSION."
 mkdir -p $DEST/output
 fetch_from_github "$BOOTLOADER" "$BOOTSOURCE"
 fetch_from_github "$LINUXKERNEL" "$LINUXSOURCE"
-if [[ -n "$DOCS" ]]; then fetch_from_github "$DOCS" "$DOCSDIR"; fi
 if [[ -n "$MISC1" ]]; then fetch_from_github "$MISC1" "$MISC1_DIR"; fi
 if [[ -n "$MISC2" ]]; then fetch_from_github "$MISC2" "$MISC2_DIR"; fi
 if [[ -n "$MISC3" ]]; then fetch_from_github "$MISC3" "$MISC3_DIR"; fi
-if [[ -n "$MISC4" ]]; then fetch_from_github "$MISC4" "$MISC4_DIR"; fi
-
 
 grab_kernel_version
 
@@ -149,7 +90,6 @@ grab_kernel_version
 # Compile source or choose already packed kernel
 #--------------------------------------------------------------------------------------------------------------------------------
 if [ "$SOURCE_COMPILE" = "yes" ]; then
-
 	# Patching sources
 	patching_sources
 
@@ -161,15 +101,13 @@ if [ "$SOURCE_COMPILE" = "yes" ]; then
 
 	# compile kernel and create archives
 	compile_kernel
-
 else
-	
 	# Compile u-boot if not exits in cache
 	CHOOSEN_UBOOT="$BOARD"_"$BRANCH"_u-boot_"$VER".tgz
 	if [ ! -f "$DEST/output/u-boot/$CHOOSEN_UBOOT" ]; then
 		compile_uboot
 	fi
-	
+
 	# choose kernel from ready made
 	choosing_kernel
 fi
@@ -179,6 +117,8 @@ fi
 # create or use prepared root file-system
 #--------------------------------------------------------------------------------------------------------------------------------
 create_debian_template
+
+
 mount_debian_template
 
 
@@ -193,27 +133,26 @@ install_kernel
 # install board specific applications
 
 #--------------------------------------------------------------------------------------------------------------------------------
-install_board_specific 
+install_board_specific
 
 
 #--------------------------------------------------------------------------------------------------------------------------------
 # install external applications
 #--------------------------------------------------------------------------------------------------------------------------------
-if [ "$EXTERNAL" = "yes" ]; then
 install_external_applications
-fi
 
 
 #--------------------------------------------------------------------------------------------------------------------------------
 # add some summary to the image
 #--------------------------------------------------------------------------------------------------------------------------------
-fingerprint_image "$DEST/output/sdcard/root/readme.txt"
+fingerprint_image
 
 
 #--------------------------------------------------------------------------------------------------------------------------------
 # closing image
 #--------------------------------------------------------------------------------------------------------------------------------
 closing_image
+
 
 end=`date +%s`
 runtime=$(((end-start)/60))

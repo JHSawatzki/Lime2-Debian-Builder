@@ -16,18 +16,18 @@ set -e
 N=/etc/init.d/resize2fs
 
 case "$1" in
-  start)
-	echo "Resizing SD card file-system..." 
-        /sbin/resize2fs /dev/mmcblk0p1 2>/dev/null
-        /sbin/insserv -r resize2fs
-        ;;
-   stop)
-        echo "Resizing in next start"
-        ;;
-  *)
-        echo "Usage: $N {start}" >&2
-        exit 1
-        ;;
+	start)
+		echo "Resizing SD card file-system..." 
+		/sbin/resize2fs /dev/mmcblk0p1 2>/dev/null
+		/sbin/insserv -r resize2fs
+		;;
+	stop)
+		echo "Resizing in next start"
+		;;
+	*)
+		echo "Usage: $N {start}" >&2
+		exit 1
+		;;
 esac
 
 exit 0

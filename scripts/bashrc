@@ -1,57 +1,40 @@
 if [ ${TERM} == "dumb" ]; then
-    return
+	return
 fi
-
 
 OUT=""
 LOAD=$(w | sed -n 1p  | awk '{print $(NF-2), $(NF-1),$(NF-0)}')
 OUT="${OUT}Load: ${LOAD} "
 
-## getting temperature from USB termometer 
-## http://www.dx.com/p/81105
-##
-if which temper >/dev/null; then
-   TEMPER=$(temper -c)
-   if echo $TEMPER | egrep -qv "Couldn't find the USB device"; then
-      TEMPER=$(echo "scale=1;${TEMPER}/1" | bc)
-      TEMPER="- Ambient: ${TEMPER}"
-   else
-      TEMPER=""
-   fi
-fi
 
 CEL=$(awk 'BEGIN { print "\302\260C"; }')
-
 if [ -d "/sys/devices/platform/sunxi-i2c.0/i2c-0/0-0034/" ]; then
-TEMP=$(cat /sys/devices/platform/sunxi-i2c.0/i2c-0/0-0034/temp1_input)
-TEMP=$(echo "scale=1;${TEMP}/1000" | bc)  
-# if we are reading A20 temp with daemon
-if [ -f "/run/soc-temp" ]; then 
-TEMP=$(cat /run/soc-temp)
-fi
-OUT="${OUT}- Board: ${TEMP}${CEL} "
-fi
-
-if [[ -n $TEMPER ]]; then
-OUT=$OUT"${TEMPER}${CEL} "
+	TEMP=$(cat /sys/devices/platform/sunxi-i2c.0/i2c-0/0-0034/temp1_input)
+	TEMP=$(echo "scale=1;${TEMP}/1000" | bc)  
+	# if we are reading A20 temp with daemon
+	if [ -f "/run/soc-temp" ]; then 
+		TEMP=$(cat /run/soc-temp)
+	fi
+	OUT="${OUT}- Board: ${TEMP}${CEL} "
 fi
 
-if [ "$(cat /proc/partitions |grep sd)" != "" ];then
-SDA_TYPE=$(/sbin/udevadm info --query=all --name=sda | grep ID_BUS=)
-SDA_TYPE=${SDA_TYPE#*=}
+
+if [ "$(cat /proc/partitions |grep sd)" != "" ]; then
+	SDA_TYPE=$(/sbin/udevadm info --query=all --name=sda | grep ID_BUS=)
+	SDA_TYPE=${SDA_TYPE#*=}
 fi
 
 # if we have a hard drive
-if [[ -e '/dev/sda' && $SDA_TYPE == "ata" ]] ; then
-   HDDTEMP=$(/usr/sbin/hddtemp /dev/sda 2>&1)
-   if [ $? -eq 0 ]; then
-       HDDTEMP=$(echo ${HDDTEMP} | awk '{print $NF}')
-       HDDFREE=$(df -h /dev/sda1 | grep sda | awk '{ print " / " $(NF-2)}')
-       if [ "${HDDFREE}" != "" ]; then
-          HDDFREE="${HDDFREE}"b
-       fi
-       OUT="${OUT}- Drive: ${HDDTEMP}${HDDFREE} "
-   fi
+if [[ -e '/dev/sda' && $SDA_TYPE == "ata" ]]; then
+	HDDTEMP=$(/usr/sbin/hddtemp /dev/sda 2>&1)
+	if [ $? -eq 0 ]; then
+		HDDTEMP=$(echo ${HDDTEMP} | awk '{print $NF}')
+		HDDFREE=$(df -h /dev/sda1 | grep sda | awk '{ print " / " $(NF-2)}')
+		if [ "${HDDFREE}" != "" ]; then
+			HDDFREE="${HDDFREE}"b
+		fi
+		OUT="${OUT}- Drive: ${HDDTEMP}${HDDFREE} "
+	fi
 fi
 
 

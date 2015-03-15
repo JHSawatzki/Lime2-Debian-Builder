@@ -1,0 +1,10 @@
+--- a/arch/arm/boot/dts/sun7i-a20-olinuxino-lime2.dts
++++ b/arch/arm/boot/dts/sun7i-a20-olinuxino-lime2.dts
+@@ -200,6 +200,7 @@
+ 		green {
+ 			label = "a20-olinuxino-lime2:green:usr";
+ 			gpios = <&pio 7 2 0>;
++			linux,default-trigger = "timer";
+ 			default-state = "on";
+ 		};
+ 	};
