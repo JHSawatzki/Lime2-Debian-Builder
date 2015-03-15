@@ -1,8 +1,8 @@
 deb http://ftp.de.debian.org/debian/ wheezy main contrib non-free
 deb-src http://ftp.de.debian.org/debian/ wheezy main contrib non-free
 
-deb http://ftp.de.debian.org/debian-backports/ wheezy-backports main
-deb-src http://ftp.de.debian.org/debian-backports/ wheezy-backports main
+deb http://ftp.de.debian.org/debian/ wheezy-backports main
+deb-src http://ftp.de.debian.org/debian/ wheezy-backports main
 
 deb http://ftp.debian.org/debian/ wheezy-updates main contrib non-free
 deb-src http://ftp.debian.org/debian/ wheezy-updates main contrib non-free

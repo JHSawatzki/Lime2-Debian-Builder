@@ -23,7 +23,6 @@ fi
 # Load libraries
 #--------------------------------------------------------------------------------------------------------------------------------
 source $SRC/Lime2-Debian-Builder/configuration.sh			# Board configuration
-source $SRC/Lime2-Debian-Builder/boards.sh 					# Board specific install
 source $SRC/Lime2-Debian-Builder/common.sh 					# Functions
 
 

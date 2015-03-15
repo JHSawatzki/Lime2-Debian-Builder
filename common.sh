@@ -458,7 +458,7 @@ END
 
 		# install aditional packages
 		PAKETE="automake bash-completion bc build-essential cmake cpufrequtils curl e2fsprogs evtest figlet fping git git-core haveged hddtemp hdparm htop i2c-tools iperf iotop less libtool libusb-1.0-0 libwrap0-dev libfuse2 libssl-dev logrotate lsof makedev module-init-tools nano ntp parted pkg-config pciutils pv python-smbus rsync screen stress sudo sysfsutils toilet u-boot-tools unzip usbutils wget"
-		chroot $DEST/sdcard /bin/bash -c "debconf-apt-progress -- apt-get -y install $PAKETE"
+		LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "debconf-apt-progress -- apt-get -y install $PAKETE"
 		
 		#TODO WIFI
 		#PAKETEWIFI="hostapd iw rfkill wireless-tools wpasupplicant"
@@ -488,28 +488,28 @@ END
 		#--------------------------------------------------------------------------------------------------------------------------------
 
 		# remove what's not needed
-		chroot $DEST/sdcard /bin/bash -c "debconf-apt-progress -- apt-get -y autoremove"
+		LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "debconf-apt-progress -- apt-get -y autoremove"
 
 		# scripts for autoresize at first boot
 		cp $SRC/Lime2-Debian-Builder/scripts/resize2fs $DEST/sdcard/etc/init.d
 		cp $SRC/Lime2-Debian-Builder/scripts/firstrun $DEST/sdcard/etc/init.d
-		chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/init.d/firstrun"
-		chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/init.d/resize2fs"
-		chroot $DEST/sdcard /bin/bash -c "insserv firstrun >> /dev/null"
+		LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/init.d/firstrun"
+		LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/init.d/resize2fs"
+		LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "insserv firstrun >> /dev/null"
 
 		# install custom bashrc
 		cat $SRC/Lime2-Debian-Builder/scripts/bashrc >> $DEST/sdcard/etc/bash.bashrc
 
 		# install ramlog only on wheezy
 		cp $SRC/Lime2-Debian-Builder/bin/ramlog_2.0.0_all.deb $DEST/sdcard/tmp
-		chroot $DEST/sdcard /bin/bash -c "dpkg -i /tmp/ramlog_2.0.0_all.deb"
+		LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "dpkg -i /tmp/ramlog_2.0.0_all.deb"
 		rm $DEST/sdcard/tmp/ramlog_2.0.0_all.deb
 		sed -e 's/TMPFS_RAMFS_SIZE=/TMPFS_RAMFS_SIZE=512m/g' -i $DEST/sdcard/etc/default/ramlog
 		sed -e 's/# Required-Start:    $remote_fs $time/# Required-Start:    $remote_fs $time ramlog/g' -i $DEST/sdcard/etc/init.d/rsyslog
 		sed -e 's/# Required-Stop:     umountnfs $time/# Required-Stop:     umountnfs $time ramlog/g' -i $DEST/sdcard/etc/init.d/rsyslog
 
 		# set console
-		chroot $DEST/sdcard /bin/bash -c "export TERM=linux"
+		LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "export TERM=linux"
 
 		# change time zone data
 		echo $TZDATA > $DEST/sdcard/etc/timezone
@@ -537,7 +537,7 @@ EOT
 		fi
 
 		# clean deb cache
-		chroot $DEST/sdcard /bin/bash -c "apt-get -y clean"
+		LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "apt-get -y clean"
 
 		echo "------ Closing image"
 		chroot $DEST/sdcard /bin/bash -c "sync"
@@ -567,40 +567,40 @@ EOT
 
 do_tmeslogger_cutom (){
 	# install watchdog
-	chroot $DEST/sdcard /bin/bash -c "debconf-apt-progress -- apt-get -y install watchdog"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "debconf-apt-progress -- apt-get -y install watchdog"
 	/bin/cp -f $SRC/Lime2-Debian-Builder/config/watchdog.conf $DEST/sdcard/etc/watchdog.conf
 
 	# install acpi
-	chroot $DEST/sdcard /bin/bash -c "debconf-apt-progress -- apt-get -y install acpid acpi-support-base"
-	chroot $DEST/sdcard /bin/bash -c "service acpid stop"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "debconf-apt-progress -- apt-get -y install acpid acpi-support-base"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "service acpid stop"
 	
 	PAKETE_TMESLOGGER="ca-certificates dhcp3-client libusb-1.0-0-dev nginx php5-common php5-fpm php5-json php5-mcrypt php5-sqlite proftpd-basic python2.7 python2.7-dev python-sqlite resolvconf rsyslog sqlite3"
-	chroot $DEST/sdcard /bin/bash -c "debconf-apt-progress -- apt-get -y install $PAKETE_TMESLOGGER"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "debconf-apt-progress -- apt-get -y install $PAKETE_TMESLOGGER"
 	
-	chroot $DEST/sdcard /bin/bash -c "service ssh stop"
-	chroot $DEST/sdcard /bin/bash -c "service proftpd stop"
-	chroot $DEST/sdcard /bin/bash -c "service nginx stop"
-	chroot $DEST/sdcard /bin/bash -c "service php5-fpm stop"
-	chroot $DEST/sdcard /bin/bash -c "service ntp stop"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "service ssh stop"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "service proftpd stop"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "service nginx stop"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "service php5-fpm stop"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "service ntp stop"
 
 	sed -e 's/^#Subsystem/Subsystem/g' -i $DEST/sdcard/etc/ssh/sshd_config
 	
 	cp $SRC/Lime2-Debian-Builder/config/if-up.d/ntp $DEST/sdcard/etc/network/if-up.d
-	chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/network/if-up.d/ntp"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/network/if-up.d/ntp"
 
 	#Config user tmeslogger
-	chroot $DEST/sdcard /bin/bash -c "adduser --system --home /usr/local/tmeslogger --group --disabled-password --disabled-login tmeslogger"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0770 /usr/local/tmeslogger"
-	chroot $DEST/sdcard /bin/bash -c "usermod -a -G ftp tmeslogger"
-	chroot $DEST/sdcard /bin/bash -c "usermod -a -G adm tmeslogger"
-	chroot $DEST/sdcard /bin/bash -c "usermod -a -G tmeslogger ftp"
-	chroot $DEST/sdcard /bin/bash -c "usermod -a -G tmeslogger www-data"
-	chroot $DEST/sdcard /bin/bash -c "usermod -a -G sudo www-data"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "adduser --system --home /usr/local/tmeslogger --group --disabled-password --disabled-login tmeslogger"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0770 /usr/local/tmeslogger"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "usermod -a -G ftp tmeslogger"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "usermod -a -G adm tmeslogger"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "usermod -a -G tmeslogger ftp"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "usermod -a -G tmeslogger www-data"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "usermod -a -G sudo www-data"
 	mkdir $DEST/sdcard/var/log/tmeslogger
-	chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /var/log/tmeslogger/"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /var/log/tmeslogger/"
 	
 	cp $SRC/Lime2-Debian-Builder/scripts/dofstrim $DEST/sdcard/etc/cron.weekly/dofstrim
-	chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/cron.weekly/dofstrim"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/cron.weekly/dofstrim"
 	
 	#Nginx Config
 	/bin/cp -f $SRC/Lime2-Debian-Builder/config/nginx.conf $DEST/sdcard/etc/nginx/nginx.conf
@@ -608,7 +608,7 @@ do_tmeslogger_cutom (){
 	rm $DEST/sdcard/usr/share/nginx/www/50x.html
 	rm $DEST/sdcard/usr/share/nginx/www/index.html
 	cp $SRC/Lime2-Debian-Builder/config/if-up.d/nginx $DEST/sdcard/etc/network/if-up.d
-	chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/network/if-up.d/nginx"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/network/if-up.d/nginx"
 
 	#PHP FPM Config
 	/bin/cp -f $SRC/Lime2-Debian-Builder/config/php-fpm.conf $DEST/sdcard/etc/php5/fpm/php-fpm.conf
@@ -620,12 +620,12 @@ do_tmeslogger_cutom (){
 	/bin/cp -f $SRC/Lime2-Debian-Builder/config/modules.conf $DEST/sdcard/etc/proftpd/modules.conf
 	rm $DEST/sdcard/srv/ftp/welcome.msg
 	cp $SRC/Lime2-Debian-Builder/config/if-up.d/proftpd $DEST/sdcard/etc/network/if-up.d
-	chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/network/if-up.d/proftpd"
-	chroot $DEST/sdcard /bin/bash -c "echo ftp:$ROOTPWD | chpasswd"
-	chroot $DEST/sdcard /bin/bash -c "groupadd ftp"
-	chroot $DEST/sdcard /bin/bash -c "usermod -g ftp ftp"
-	chroot $DEST/sdcard /bin/bash -c "chown ftp:ftp /srv/ftp"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0770 /srv/ftp"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/network/if-up.d/proftpd"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "echo ftp:$ROOTPWD | chpasswd"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "groupadd ftp"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "usermod -g ftp ftp"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chown ftp:ftp /srv/ftp"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0770 /srv/ftp"
 
 	#Logrotate
 	/bin/cp -f $SRC/Lime2-Debian-Builder/config/logrotate.conf $DEST/sdcard/etc/logrotate.conf
@@ -635,7 +635,7 @@ do_tmeslogger_cutom (){
 	/bin/cp -f $SRC/Lime2-Debian-Builder/config/logrotate.d/php5-fpm $DEST/sdcard/etc/logrotate.d/php5-fpm
 	
 	mkdir $DEST/sdcard/usr/local/tmeslogger/scripts
-	chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /usr/local/tmeslogger/scripts"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /usr/local/tmeslogger/scripts"
 	
 	#Proprietary code
 	if [[ $U6PRO == "yes" ]]; then
@@ -645,11 +645,11 @@ do_tmeslogger_cutom (){
 	fi
 
 	#Setup db
-	chroot $DEST/sdcard /bin/bash -c "sqlite3 /usr/local/tmeslogger/tmeslogger.db < /usr/local/tmeslogger/tmeslogger.sql"
-	chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /usr/local/tmeslogger/tmeslogger.db"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0660 /usr/local/tmeslogger/tmeslogger.db"
-	chroot $DEST/sdcard /bin/bash -c "rm /usr/local/tmeslogger/tmeslogger.sql"
-	chroot $DEST/sdcard /bin/bash -c "sqlite3 /usr/local/tmeslogger/tmeslogger.db \"UPDATE loggerStatus SET tlvalue='$(date +%Y-%m-%d)' WHERE tlkey='currentDay'\""
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "sqlite3 /usr/local/tmeslogger/tmeslogger.db < /usr/local/tmeslogger/tmeslogger.sql"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /usr/local/tmeslogger/tmeslogger.db"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0660 /usr/local/tmeslogger/tmeslogger.db"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "rm /usr/local/tmeslogger/tmeslogger.sql"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "sqlite3 /usr/local/tmeslogger/tmeslogger.db \"UPDATE loggerStatus SET tlvalue='$(date +%Y-%m-%d)' WHERE tlkey='currentDay'\""
 
 	#Setup scripts
 	cp $SRC/tmeslogger/scripts/batteryChecker.sh $DEST/sdcard/usr/local/tmeslogger/scripts
@@ -670,52 +670,52 @@ do_tmeslogger_cutom (){
 	cp $SRC/tmeslogger/scripts/systemstatus.sh $DEST/sdcard/usr/local/tmeslogger/scripts
 	cp $SRC/tmeslogger/scripts/toggleNetwork.sh $DEST/sdcard/usr/local/tmeslogger/scripts
 
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/batteryChecker.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0640 /usr/local/tmeslogger/scripts/changeInterface.awk"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/changeNTP.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/changeSFTP.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/disableService.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/enableService.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/factoryReset.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/restartService.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/servicestatus.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/setDate.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/setNetwork.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/setPassword.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/setTimezone.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/startBlink.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/stopBlink.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/systemstatus.sh"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/toggleNetwork.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/batteryChecker.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0640 /usr/local/tmeslogger/scripts/changeInterface.awk"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/changeNTP.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/changeSFTP.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/disableService.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/enableService.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/factoryReset.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/restartService.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/servicestatus.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/setDate.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/setNetwork.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/setPassword.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/setTimezone.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/startBlink.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/stopBlink.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/systemstatus.sh"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0750 /usr/local/tmeslogger/scripts/toggleNetwork.sh"
 
 	#Setup sudo
 	cp $SRC/tmeslogger/scripts/tmeslogger.sudo $DEST/sdcard/etc/sudoers.d/tmeslogger
-	chroot $DEST/sdcard /bin/bash -c "chmod 0440 /etc/sudoers.d/tmeslogger"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0440 /etc/sudoers.d/tmeslogger"
 
 	#Setup apps
 	cp $SRC/tmeslogger/ftppush.py $DEST/sdcard/usr/local/tmeslogger/ftppush.py
 	cp $SRC/tmeslogger/tmeslogger.py $DEST/sdcard/usr/local/tmeslogger/tmeslogger.py
 	cp $SRC/tmeslogger/dbread.py $DEST/sdcard/usr/local/tmeslogger/dbread.py
 
-	chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /usr/local/tmeslogger/ftppush.py"
-	chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /usr/local/tmeslogger/tmeslogger.py"
-	chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /usr/local/tmeslogger/dbread.py"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /usr/local/tmeslogger/ftppush.py"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /usr/local/tmeslogger/tmeslogger.py"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chown tmeslogger:tmeslogger /usr/local/tmeslogger/dbread.py"
 
-	chroot $DEST/sdcard /bin/bash -c "chmod +x /usr/local/tmeslogger/ftppush.py"
-	chroot $DEST/sdcard /bin/bash -c "chmod +x /usr/local/tmeslogger/tmeslogger.py"
-	chroot $DEST/sdcard /bin/bash -c "chmod 0550 /usr/local/tmeslogger/dbread.py"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod +x /usr/local/tmeslogger/ftppush.py"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod +x /usr/local/tmeslogger/tmeslogger.py"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod 0550 /usr/local/tmeslogger/dbread.py"
 
 	cp $SRC/tmeslogger/scripts/ftppush $DEST/sdcard/etc/init.d/ftppush
 	cp $SRC/tmeslogger/scripts/tmeslogger $DEST/sdcard/etc/init.d/tmeslogger
 	cp $SRC/tmeslogger/scripts/processRebootAndShutdown $DEST/sdcard/etc/init.d/processRebootAndShutdown
 
-	chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/init.d/ftppush"
-	chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/init.d/tmeslogger"
-	chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/init.d/processRebootAndShutdown"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/init.d/ftppush"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/init.d/tmeslogger"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "chmod +x /etc/init.d/processRebootAndShutdown"
 
-	chroot $DEST/sdcard /bin/bash -c "update-rc.d ftppush defaults"
-	chroot $DEST/sdcard /bin/bash -c "update-rc.d tmeslogger defaults"
-	chroot $DEST/sdcard /bin/bash -c "update-rc.d processRebootAndShutdown defaults"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "update-rc.d ftppush defaults"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "update-rc.d tmeslogger defaults"
+	LC_ALL=C LANGUAGE=C LANG=C chroot $DEST/sdcard /bin/bash -c "update-rc.d processRebootAndShutdown defaults"
 
 	#Web
 	cp -r $SRC/tmeslogger/web/  $DEST/sdcard/usr/share/nginx/www/
@@ -726,7 +726,7 @@ do_tmeslogger_cutom (){
 	unzip $SRC/Lime2-Debian-Builder/bin/pyA20-0.2.0.zip -d $DEST/sdcard/root/
 
 	#Install chilkat python library
-	unzip $SRC/Lime2-Debian-Builder/bin/chilkat-9.5.0-python-2.7-armv7a-hardfp-linux.tar.gz $SRC/Lime2-Debian-Builder/bin/
+	unzip $SRC/Lime2-Debian-Builder/bin/chilkat-9.5.0-python-2.7-armv7a-hardfp-linux.zip $SRC/Lime2-Debian-Builder/bin/
 	mv $SRC/Lime2-Debian-Builder/bin/chilkat-9.5.0-python-2.7-armv7a-hardfp-linux/_chilkat.so $DEST/sdcard/usr/local/lib/python2.7/dist-packages/
 	mv $SRC/Lime2-Debian-Builder/bin/chilkat-9.5.0-python-2.7-armv7a-hardfp-linux/chilkat.py $DEST/sdcard/usr/local/lib/python2.7/dist-packages/
 	rm -r $SRC/Lime2-Debian-Builder/bin/chilkat-9.5.0-python-2.7-armv7a-hardfp-linux
@@ -812,7 +812,7 @@ closing_image (){
 	rm $DEST/sdcard/var/log/{bootstrap,dpkg}.log
 	rm $DEST/sdcard/var/log/*.?
 	rm $DEST/sdcard/tmp/*
-	for a in $DEST/sdcard/var/log/{*.log,apt/*.log,debug,dmesg,faillog,messages,syslog,wtmp} do > $a; done
+	for a in $DEST/sdcard/var/log/{*.log,apt/*.log,debug,dmesg,faillog,messages,syslog,wtmp} do echo -n > $a; done
 	rm $DEST/sdcard/var/cache/apt/* 
 	rm $DEST/sdcard/var/lib/apt/lists/*
 
