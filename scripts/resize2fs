@@ -17,9 +17,16 @@ N=/etc/init.d/resize2fs
 
 case "$1" in
 	start)
+		echo timer > /sys/class/leds/green\:ph02\:led1/trigger
+		echo 500 > /sys/class/leds/green\:ph02\:led1/delay_on
+		echo 500 > /sys/class/leds/green\:ph02\:led1/delay_off
+
 		echo "Resizing SD card file-system..." 
 		/sbin/resize2fs /dev/mmcblk0p1 2>/dev/null
 		/sbin/insserv -r resize2fs
+
+		echo none > /sys/class/leds/green\:ph02\:led1/trigger
+		echo 255 > /sys/class/leds/green\:ph02\:led1/brightness
 		;;
 	stop)
 		echo "Resizing in next start"

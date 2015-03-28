@@ -26,49 +26,66 @@ do_expand_rootfs(){
 
 case "$1" in
 	start)
+		echo timer > /sys/class/leds/green\:ph02\:led1/trigger
+		echo 1000 > /sys/class/leds/green\:ph02\:led1/delay_on
+		echo 1000 > /sys/class/leds/green\:ph02\:led1/delay_off
 		reboot=false
 		echo ""
 		toilet -f standard "first run"
-		
+
 		# if we have 1G ram reduce RAMLOG size 
 		if (($MEMTOTAL <= 1)); then
 			if [ -f "/etc/default/ramlog" ]; then
 				sed -e 's/TMPFS_RAMFS_SIZE=512m/TMPFS_RAMFS_SIZE=256m/g' -i /etc/default/ramlog
 			fi
 		fi
-		
+
 		echo "Installing Labjack Exodriver..."
-		cd /root/exodriver-master
+		cd /root/exodriver
 		/bin/bash ./install.sh
 		cd /
-		rm -r /root/exodriver-master
-		
+		rm -r /root/exodriver
+
 		echo "Installing Labjack python library..."
-		cd /root/LabJackPython-master
+		cd /root/LabJackPython
 		python setup.py install
 		cd /
-		rm -r /root/LabJackPython-master
-		
-		echo "Installing pyA20..."
-		cd /root/pyA20-0.2.0/
+		rm -r /root/LabJackPython
+
+		echo "Installing pyA20Lime2..."
+		cd /root/pyA20Lime2-0.2.0
 		python setup.py install
 		cd /
-		rm -r /root/pyA20-0.2.0
-		
+		rm -r /root/pyA20Lime2-0.2.0
+
+		rm /etc/adjtime
+
+		echo 750 > /sys/class/leds/green\:ph02\:led1/delay_on
+		echo 750 > /sys/class/leds/green\:ph02\:led1/delay_off
 		echo "Generating SSL cert..."
-		echo -e "DE\nNRW\nWuelfrath\nTMES UG\nIT\ninfo@tmes.de\n" | openssl req -x509 -newkey rsa:2048 -keyout /etc/nginx/nginx.ssl.key -out /etc/nginx/nginx.ssl.crt -days 3650 -nodes
-		
+		echo -e "DE\nNRW\nWuelfrath\nTMES UG\nIT\ninfo@tm**.de\n" | openssl req -x509 -newkey rsa:2048 -keyout /etc/nginx/nginx.ssl.key -out /etc/nginx/nginx.ssl.crt -days 3650 -nodes
+
+		echo 500 > /sys/class/leds/green\:ph02\:led1/delay_on
+		echo 500 > /sys/class/leds/green\:ph02\:led1/delay_off
 		echo "Generating cookie secret..."
 		SLIM_SECRET=$(< /dev/urandom tr -dc A-Za-z0-9 | head -c${1:-32};echo;)
 		sed -e "/secret/c\                'secret' => '$SLIM_SECRET'," -i /usr/share/nginx/www/index.php
-		
+
+		echo 250 > /sys/class/leds/green\:ph02\:led1/delay_on
+		echo 250 > /sys/class/leds/green\:ph02\:led1/delay_off
 		echo "Generating SSH key..."
 		echo "This process takes around one minute to finish..."
 		rm -f /etc/ssh/ssh_host*
 		dpkg-reconfigure openssh-server 
+
+		#Cron battery checker
+		echo '* *     * * *   root    /usr/local/tmeslogger/scripts/batteryChecker.sh' >> /etc/crontab
+
 		set +e
-		
+
 		#expanding rootfs
+		echo 100 > /sys/class/leds/green\:ph02\:led1/delay_on
+		echo 100 > /sys/class/leds/green\:ph02\:led1/delay_off
 		echo "Expanding rootfs..."
 		if do_expand_rootfs; then
 			echo "Expanding rootfs success, rebooting automatically." 
@@ -77,11 +94,18 @@ case "$1" in
 		else
 			echo "Expanding rootfs has failed, see log files." 
 		fi
-		
+
+		/sbin/insserv tmeslogger
+		/sbin/insserv ftppush
+
 		/sbin/insserv -r firstrun
 		if $reboot; then
 			/sbin/reboot
+			echo 1000 > /sys/class/leds/green\:ph02\:led1/delay_on
+			echo 1000 > /sys/class/leds/green\:ph02\:led1/delay_off
 		fi
+		echo none > /sys/class/leds/green\:ph02\:led1/trigger
+		echo 255 > /sys/class/leds/green\:ph02\:led1/brightness
 		;;
 	*)
 		echo "Usage: $N {start}" >&2

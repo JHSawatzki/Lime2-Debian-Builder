@@ -1,8 +1,8 @@
 diff --git a/drivers/spi/Kconfig b/drivers/spi/Kconfig
-index c4fb46a..12b2477 100644
+index c4fb46a..2f9c804 100644
 --- a/drivers/spi/Kconfig
 +++ b/drivers/spi/Kconfig
-@@ -381,6 +381,15 @@ config SUN5I_SPI_NDMA
+@@ -381,6 +381,19 @@ config SUN5I_SPI_NDMA
            This selects SPI DMA mode with DMA transfer
            Y select NDMA mode and N select DDMA mode
  
@@ -11,29 +11,33 @@ index c4fb46a..12b2477 100644
 +	depends on ARCH_SUN7I
 +	help
 +		Allwinner Soc SPI controller,present on SUN7I chips.
-+		Different DMA Architecture than Sun4i
 +
-+
++config SUN7I_SPI_NDMA
++        bool "SUN7I SPI Normal DMA mode select"
++        depends on SPI_SUN7I
++        help
++          This selects SPI DMA mode with DMA transfer
++          Y select NDMA mode and N select DDMA mode
 +
  config SPI_TEGRA
  	tristate "Nvidia Tegra SPI controller"
  	depends on ARCH_TEGRA && TEGRA_SYSTEM_DMA
 diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
-index a13913f..8e9bb71 100644
+index a13913f..f26f012 100644
 --- a/drivers/spi/Makefile
 +++ b/drivers/spi/Makefile
-@@ -64,4 +64,5 @@ obj-$(CONFIG_SPI_TXX9)			+= spi-txx9.o
+@@ -64,4 +64,4 @@ obj-$(CONFIG_SPI_TXX9)			+= spi-txx9.o
  obj-$(CONFIG_SPI_XILINX)		+= spi-xilinx.o
  obj-$(CONFIG_SPI_SUN4I)			+= spi_sunxi.o
  obj-$(CONFIG_SPI_SUN5I)			+= spi_sunxi.o
+-
 +obj-$(CONFIG_SPI_SUN7I)			+= spi-sun7i.o
- 
 diff --git a/drivers/spi/spi-sun7i.c b/drivers/spi/spi-sun7i.c
 new file mode 100644
-index 0000000..52c9d09
+index 0000000..a9967b7
 --- /dev/null
 +++ b/drivers/spi/spi-sun7i.c
-@@ -0,0 +1,2226 @@
+@@ -0,0 +1,2142 @@
 +/*
 + * drivers/spi/spi-sun7i.c
 + * Copyright (C) 2012 - 2016 Reuuimlla Limited
@@ -60,6 +64,7 @@ index 0000000..52c9d09
 +#include <linux/gpio.h>
 +#include <linux/platform_device.h>
 +#include <linux/spi/spi.h>
++#include <linux/spi/spi_bitbang.h>
 +#include <asm/cacheflush.h>
 +#include <asm/io.h>
 +#include <mach/dma.h>
@@ -69,14 +74,6 @@ index 0000000..52c9d09
 +#include <mach/spi.h>
 +
 +#define SPI_DEBUG_LEVEL 2
-+#define CONFIG_SUN7I_SPI_NDMA
-+
-+#ifndef MAX_UDELAY_MS
-+#define MAX_UDELAY_US 5000
-+#else
-+#define MAX_UDELAY_US (MAX_UDELAY_MS*1000)
-+#endif
-+
 +
 +#if (SPI_DEBUG_LEVEL == 1)
 +    #define spi_dbg(format,args...)     do {} while (0)
@@ -519,7 +516,6 @@ index 0000000..52c9d09
 +    spi_dbg("%s: spi%d dma read data callback\n", __func__, aw_spi->master->bus_num);
 +
 +    spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +    spi_disable_dma_irq(SPI_DRQEN_RR, aw_spi->base_addr);
 +    spin_unlock_irqrestore(&aw_spi->lock, flags);
 +}
@@ -575,9 +571,9 @@ index 0000000..52c9d09
 +{
 +    int bus_num = aw_spi->master->bus_num;
 +    unsigned char spi_rx_ndrq[] = {N_SRC_SPI0_RX, N_SRC_SPI1_RX, N_SRC_SPI2_RX, N_SRC_SPI3_RX};
-+    unsigned char spi_tx_ndrq[] = {N_DST_SPI0_TX, N_DST_SPI1_TX, N_DST_SPI2_TX, N_DST_SPI3_TX};
++    unsigned char spi_tx_ndrq[] = {N_DST_SPI0_TX, N_DST_SPI1_TX, N_DST_SPI3_TX, N_DST_SPI3_TX};
 +    unsigned char spi_rx_ddrq[] = {D_SRC_SPI0_RX, D_SRC_SPI1_RX, D_SRC_SPI2_RX, D_SRC_SPI3_RX};
-+    unsigned char spi_tx_ddrq[] = {D_DST_SPI0_TX, D_DST_SPI1_TX, D_DST_SPI2_TX, D_DST_SPI3_TX};
++    unsigned char spi_tx_ddrq[] = {D_DST_SPI0_TX, D_DST_SPI1_TX, D_DST_SPI3_TX, D_DST_SPI3_TX};
 +    unsigned long spi_phyaddr[] = {SPI0_BASE_ADDR, SPI1_BASE_ADDR, SPI2_BASE_ADDR, SPI3_BASE_ADDR}; /* physical address */
 +    dma_config_t spi_hw_conf;
 +    dma_hdl_t dma_hdle;
@@ -696,14 +692,12 @@ index 0000000..52c9d09
 +	spi_dbg("%s: enter\n", __func__);
 +    if (SPI_DMA_RDEV == dma_dir) {
 +        spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +        ret  = sw_dma_ctl(aw_spi->dma_hdle_rx, DMA_OP_STOP, NULL);
 +        ret += sw_dma_release(aw_spi->dma_hdle_rx);
 +        aw_spi->dma_hdle_rx = NULL;
 +        spin_unlock_irqrestore(&aw_spi->lock, flags);
 +    } else if (SPI_DMA_WDEV == dma_dir) {
 +        spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +        ret  = sw_dma_ctl(aw_spi->dma_hdle_tx, DMA_OP_STOP, NULL);
 +        ret += sw_dma_release(aw_spi->dma_hdle_tx);
 +        aw_spi->dma_hdle_tx = NULL;
@@ -829,20 +823,14 @@ index 0000000..52c9d09
 +    enum spi_dma_dir dma_dir = SPI_DMA_NULL;
 +    int ret = 0;
 +
-+#if (SPI_DEBUG_LEVEL== 3)
-+    if(tx_len > 2)
-+    	spi_inf("%s: spi%d  txbuf %p, start: %2x rxbuf %p, len %d\n",
-+            __func__, spi->master->bus_num, tx_buf, tx_buf[0], rx_buf, tx_len);
-+    else
-+    	spi_inf("%s: spi%d begin transfer, txbuf %p, start: %4x rxbuf %p, len %d\n",
-+            __func__, spi->master->bus_num, tx_buf, tx_buf[0]<<8 | tx_buf[1], rx_buf, tx_len);
-+#endif
-+
++    spi_dbg("%s: spi%d begin transfer, txbuf %p, rxbuf %p, len %d\n",
++            __func__, spi->master->bus_num, tx_buf, rx_buf, t->len);
 +
 +    if ((!t->tx_buf && !t->rx_buf) || !t->len) {
 +        spi_err("%s: spi%d invalid buffer or len\n", __func__, spi->master->bus_num);
 +        return -EINVAL;
 +    }
++
 +    /* write 1 to clear 0 */
 +    spi_clr_irq_pending(SPI_STAT_MASK, base_addr);
 +    /* disable all DRQ */
@@ -859,20 +847,17 @@ index 0000000..52c9d09
 +    /* check if use full duplex or half duplex */
 +    if (tx_buf && rx_buf) {
 +        spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +        aw_spi->duplex_flag = FULL_DUPLEX_RX_TX;
 +        spi_set_bc_wtc(tx_len, 0, base_addr);
 +        spin_unlock_irqrestore(&aw_spi->lock, flags);
 +    } else {
 +        if (tx_buf) {
 +            spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +            aw_spi->duplex_flag = HALF_DUPLEX_TX;
 +            spi_set_bc_wtc(tx_len, 0, base_addr);
 +            spin_unlock_irqrestore(&aw_spi->lock, flags);
 +        } else if (rx_buf) {
 +            spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +            aw_spi->duplex_flag = HALF_DUPLEX_RX;
 +            spi_set_bc_wtc(0, rx_len, base_addr);
 +            spin_unlock_irqrestore(&aw_spi->lock, flags);
@@ -982,7 +967,6 @@ index 0000000..52c9d09
 +                spi_start_xfer(base_addr);
 +
 +                spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +                for (; tx_len > 0; --tx_len) {
 +                    writeb(*tx_buf++, base_addr + SPI_TXDATA_REG);
 +                }
@@ -1005,7 +989,6 @@ index 0000000..52c9d09
 +                spi_start_xfer(base_addr);
 +
 +                spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +                for (; tx_len > 0; --tx_len) {
 +                    writeb(*tx_buf++, base_addr + SPI_TXDATA_REG);
 +                }
@@ -1060,28 +1043,14 @@ index 0000000..52c9d09
 +    return ret;
 +}
 +
-+
-+/* helper for long interbyte usecs */
-+static void sun7i_spi_safe_udelay(unsigned long usecs)
-+{
-+        while (usecs > MAX_UDELAY_US) {
-+                udelay(MAX_UDELAY_US);
-+                usecs -= MAX_UDELAY_US;
-+        }
-+        udelay(usecs);
-+}
-+
-+#include<linux/time.h>
-+
 +/* spi core xfer process */
 +static void sun7i_spi_work(struct work_struct *work)
 +{
 +    struct sun7i_spi *aw_spi = container_of(work, struct sun7i_spi, work);
-+    unsigned long flags = 0;
-+
-+
-+    spin_lock_irqsave(&aw_spi->lock, flags);
++    spin_lock_irq(&aw_spi->lock);
 +    aw_spi->busy = SPI_BUSY;
++
++    spi_dbg("%s: enter\n", __func__);
 +    /*
 +     * get from messages queue, and then do with them,
 +     * if message queue is empty ,then return and set status to free,
@@ -1091,28 +1060,22 @@ index 0000000..52c9d09
 +        struct spi_message *msg = NULL;
 +        struct spi_device  *spi = NULL;
 +        struct spi_transfer *t  = NULL;
-+        struct timespec t_bef,t_now;
 +        unsigned int cs_change = 0;
-+        unsigned int previous_delay = 0;
 +        int status;
 +        /* get message from message queue in sun7i_spi. */
 +        msg = container_of(aw_spi->queue.next, struct spi_message, queue);
 +        /* then delete from the message queue,now it is alone.*/
-+
-+
 +        list_del_init(&msg->queue);
-+        spin_unlock_irqrestore(&aw_spi->lock, flags);
-+     /* get spi device from this message */
++        spin_unlock_irq(&aw_spi->lock);
++        /* get spi device from this message */
 +        spi = msg->spi;
 +        /* set default value,no need to change cs,keep select until spi transfer require to change cs. */
 +        cs_change = 1;
 +        /* set message status to succeed. */
 +        status = -1;
-+
-+        getnstimeofday(&t_bef);
 +        /* search the spi transfer in this message, deal with it alone. */
 +        list_for_each_entry(t, &msg->transfers, transfer_list) {
-+            if ((status == -1) || (t->bits_per_word != spi->bits_per_word) || (t->speed_hz != spi->max_speed_hz)) { /* if spi transfer is zero,use spi device value. */
++            if ((status == -1) || t->bits_per_word || t->speed_hz) { /* if spi transfer is zero,use spi device value. */
 +                status = sun7i_spi_xfer_setup(spi, t); /* set the value every spi transfer */
 +                if (status < 0)
 +                    break; /* fail, quit */
@@ -1120,10 +1083,8 @@ index 0000000..52c9d09
 +            }
 +            
 +            /* first active the cs */
-+            if (cs_change) {
++            if (cs_change)
 +                aw_spi->cs_control(spi, 1);
-+                spi_dbg("[spi-%d]: cs active",aw_spi->master->bus_num);
-+            }
 +            /* update the new cs value */
 +            cs_change = t->cs_change;
 +            
@@ -1136,41 +1097,19 @@ index 0000000..52c9d09
 +             * > 64 : dma ;  <= 64 : cpu
 +             * wait for done completion in this function, wakup in the irq hanlder
 +             */
-+            if(previous_delay) {
-+//            	int tx_val;
-+            	long passed_nsec, delay_usec;
-+            	getnstimeofday(&t_now);
-+            	passed_nsec=((t_now.tv_sec > t_bef.tv_sec) ? t_now.tv_nsec + NSEC_PER_SEC : t_now.tv_nsec) - t_bef.tv_nsec;
-+            	delay_usec=(long) previous_delay - (passed_nsec) / 1000L - 5L;
-+            	if(delay_usec<0)
-+            		delay_usec=0;
-+//            	spi_inf("[spi-%d]: before transfer of %04x would still delay %5ldus\n",
-+//            			aw_spi->master->bus_num, tx_val, delay_usec);
-+            	sun7i_spi_safe_udelay(delay_usec);
-+            }
-+            if (t->interbyte_usecs) {
-+            	getnstimeofday(&t_bef);
-+            	previous_delay=t->interbyte_usecs;
-+            }
-+
 +            status = sun7i_spi_xfer(spi, t);
 +            if (status)
 +                break; /* fail quit, zero means succeed */
++            
 +            /* accmulate the value in the message */
 +            msg->actual_length += t->len;
 +            /* may be need to delay */
-+ //           getnstimeofday(&taft);
-+ //           spi_inf("[spi-%d]: usec before delay and since last delay: %6ld", aw_spi->master->bus_num, (taft.tv_nsec-tbef.tv_nsec)/1000L);
-+            if (t->delay_usecs) {
-+           		udelay(t->delay_usecs);
-+            }
-+  //          getnstimeofday(&tbef);
++            if (t->delay_usecs)
++                udelay(t->delay_usecs);
++            
 +            /* if zero, keep active, otherwise deactived. */
-+            if (cs_change) {
++            if (cs_change)
 +                aw_spi->cs_control(spi, 0);
-+                spi_dbg("[spi-%d]: cs inactive",aw_spi->master->bus_num);
-+            }
-+
 +        }
 +        
 +        /*
@@ -1183,17 +1122,16 @@ index 0000000..52c9d09
 +        /* fail or need to change cs */
 +        if (status || !cs_change) {
 +            aw_spi->cs_control(spi, 0);
-+            spi_dbg("[spi-%d]: cs inactive",aw_spi->master->bus_num);
 +        }
 +        
 +        /* restore default value. */
 +        //sun7i_spi_xfer_setup(spi, NULL);
-+        spin_lock_irqsave(&aw_spi->lock, flags);
++        spin_lock_irq(&aw_spi->lock);
 +    }
 +    
 +    /* set spi to free */
 +    aw_spi->busy = SPI_FREE;
-+    spin_unlock_irqrestore(&aw_spi->lock, flags);
++    spin_unlock_irq(&aw_spi->lock);
 +}
 +
 +/* wake up the sleep thread, and give the result code */
@@ -1262,13 +1200,14 @@ index 0000000..52c9d09
 +    msg->actual_length = 0;
 +    msg->status = -EINPROGRESS;
 +
-+    spi_dbg("%s: enter, spi_msg tx:%d, spi_msg rx:%d\n", __func__, aw_spi->dma_id_tx, aw_spi->dma_id_rx);
++    spi_dbg("%s: enter\n", __func__);
 +    spin_lock_irqsave(&aw_spi->lock, flags);
 +    /* add msg to the sun7i_spi queue */
 +    list_add_tail(&msg->queue, &aw_spi->queue);
 +    /* add work to the workqueue,schedule the cpu. */
 +    queue_work(aw_spi->workqueue, &aw_spi->work);
 +    spin_unlock_irqrestore(&aw_spi->lock, flags);
++
 +    /* return immediately and wait for completion in the uplayer caller. */
 +    return 0;
 +}
@@ -1280,7 +1219,7 @@ index 0000000..52c9d09
 +    struct sun7i_spi_config *config = spi->controller_data; /* general is null. */
 +    unsigned long flags;
 +
-+    spi_inf("%s: enter, bpw: %d, mshz: %d, mode: %d\n", __func__, spi->bits_per_word, spi->max_speed_hz, spi->mode);
++    spi_dbg("%s: enter\n", __func__);
 +    /* just support 8 bits per word */
 +    if (spi->bits_per_word != 8)
 +        return -EINVAL;
@@ -1313,7 +1252,6 @@ index 0000000..52c9d09
 +    config->mode          = spi->mode;
 +
 +    spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +    /* if aw16xx spi is free, then deactived the spi device */
 +    if (aw_spi->busy & SPI_FREE) {
 +        /* set chip select number */
@@ -1538,7 +1476,7 @@ index 0000000..52c9d09
 +    return 0;
 +}
 +
-+static int __devinit sun7i_spi_probe(struct platform_device *pdev)
++static int __init sun7i_spi_probe(struct platform_device *pdev)
 +{
 +    struct resource *mem_res, *dma_res_rx, *dma_res_tx;
 +    struct sun7i_spi *aw_spi;
@@ -1546,8 +1484,6 @@ index 0000000..52c9d09
 +    struct spi_master *master;
 +    int ret = 0, err = 0, irq;
 +    int cs_bitmap = 0;
-+
-+    spi_inf("%s: sun7i spi probe", __func__);
 +
 +    if (pdev->id < 0) {
 +        spi_err("%s: invalid platform device id: %d\n", __func__, pdev->id);
@@ -1728,10 +1664,7 @@ index 0000000..52c9d09
 +    struct resource *mem_res;
 +    unsigned long flags;
 +
-+    spi_dbg("%s: sun7i spi removal", __func__);
-+
 +    spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +    aw_spi->busy |= SPI_FREE;
 +    spin_unlock_irqrestore(&aw_spi->lock, flags);
 +
@@ -1751,10 +1684,9 @@ index 0000000..52c9d09
 +    mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 +    if (mem_res != NULL)
 +        release_mem_region(mem_res->start, resource_size(mem_res));
-+    free_irq(aw_spi->irq, aw_spi);
++
 +    platform_set_drvdata(pdev, NULL);
 +    spi_master_put(master);
-+    spi_inf("%s: sun7i spi removed", __func__);
 +
 +    return 0;
 +}
@@ -1767,7 +1699,6 @@ index 0000000..52c9d09
 +    unsigned long flags;
 +
 +    spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +    aw_spi->busy |= SPI_SUSPND;
 +    spin_unlock_irqrestore(&aw_spi->lock, flags);
 +
@@ -1794,7 +1725,6 @@ index 0000000..52c9d09
 +    sun7i_spi_hw_init(aw_spi);
 +
 +    spin_lock_irqsave(&aw_spi->lock, flags);
-+
 +    aw_spi->busy = SPI_FREE;
 +    spin_unlock_irqrestore(&aw_spi->lock, flags);
 +
@@ -2239,18 +2169,8 @@ index 0000000..52c9d09
 +
 +static void __exit spi_sun7i_exit(void)
 +{
-+    if (spi_used & SPI0_USED_MASK)
-+        platform_device_unregister(&sun7i_spi0_device);
-+    if (spi_used & SPI1_USED_MASK)
-+        platform_device_unregister(&sun7i_spi1_device);
-+    if (spi_used & SPI2_USED_MASK)
-+        platform_device_unregister(&sun7i_spi2_device);
-+    if (spi_used & SPI3_USED_MASK)
-+        platform_device_unregister(&sun7i_spi3_device);
-+
 +    if (spi_used)
 +        platform_driver_unregister(&sun7i_spi_driver);
-+    kfree(spi_boards);
 +}
 +
 +module_init(spi_sun7i_init);

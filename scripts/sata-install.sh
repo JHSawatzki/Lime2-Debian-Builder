@@ -1,9 +1,8 @@
 #!/bin/bash
 #
 # Copyright (c) 2014 Igor Pecovnik, igor.pecovnik@gma**.com
-# Copyright (c) 2015 JH Sawatzki, info@ib-msawa.....de
 #
-# www.igorpecovnik.com / images + support
+# Portions Copyright (c) 2015 Jan Henrik Sawatzki, info@tm**.de
 #
 # SATA and USB ARM rootfs install
 #
@@ -35,14 +34,14 @@ SOURCE=${SOURCE#"${SOURCE%%root=*}"}
 SOURCE=`echo $SOURCE| cut -d' ' -f 1`
 SOURCE="${SOURCE//root=/}"
 
+#TODO if source == *nand* cancel
+
 
 #--------------------------------------------------------------------------------------------------------------------------------
 # Which kernel and bin do we run
 #--------------------------------------------------------------------------------------------------------------------------------
-if [ -f /boot/boot.cmd ]; then
-	KERNEL=$(cat /boot/boot.cmd |grep vmlinuz |awk '{print $NF}')
-	BINFILE=$(cat /boot/boot.cmd |grep .bin |awk '{print $NF}')
-fi
+KERNEL=$(ls -l /boot/ |grep vmlinuz |awk '{print $NF}')
+BINFILE=$(cat /boot/boot.cmd |grep .bin |awk '{print $NF}')
 
 
 #--------------------------------------------------------------------------------------------------------------------------------
@@ -100,23 +99,21 @@ TODO="${TODO//./}"
 TODO="${TODO//,/}"
 whiptail --title "$SDA_TYPE install" --infobox "Copy / creating rootfs on $SDA_TYPE: $TODO files." 7 60
 rsync -avrltD --delete --stats --human-readable --exclude-from=.install-exclude  /  /mnt | pv -l -e -p -s "$TODO" >/dev/null
-if [[ $SOURCE == *nand*  ]]; then
-	# change fstab
-	sed -e 's/nand2/sda1/g' -i /mnt/etc/fstab
-else
-	if [[ $KERNEL == *"3.4"*  ]]; then
-		sed -e 's,root=\/dev\/mmcblk0p1,root=/dev/sda1,g' -i /boot/boot.cmd
-		mkimage -C none -A arm -T script -d /boot/boot.cmd /boot/boot.scr
-	else
-		sed -e 's,root=\/dev\/mmcblk0p1,root=/dev/sda1,g' -i /boot/boot-next.cmd
-		if [ -f /boot/boot-next.cmd ]; then
-			mkimage -C none -A arm -T script -d /boot/boot-next.cmd /boot/boot.scr
-		fi
-	fi
-	# change fstab
-	sed -e 's/mmcblk0p1/sda1/g' -i /mnt/etc/fstab
-	sed -i "s/data=writeback,//" /mnt/etc/fstab
-	mkdir -p /mnt/media/mmc
-	echo "/dev/mmcblk0p1        /media/mmc   ext4    defaults        0       0" >> /mnt/etc/fstab
-	echo "/media/mmc/boot   /boot   none    bind        0       0" >> /mnt/etc/fstab
+if [ -f /boot/uEnv.txt ]; then
+	sed -e 's,root=\/dev\/mmcblk0p1,root=/dev/'"$DESTPART"',g' -i /boot/uEnv.txt
 fi
+if [[ $KERNEL == *"3.4"*  ]]; then
+	sed -e 's,root=\/dev\/mmcblk0p1,root=/dev/sda1,g' -i /boot/boot.cmd
+	mkimage -C none -A arm -T script -d /boot/boot.cmd /boot/boot.scr
+else
+	sed -e 's,root=\/dev\/mmcblk0p1,root=/dev/sda1,g' -i /boot/boot-next.cmd
+	if [ -f /boot/boot-next.cmd ]; then
+		mkimage -C none -A arm -T script -d /boot/boot-next.cmd /boot/boot.scr
+	fi
+fi
+# change fstab
+sed -e 's/mmcblk0p1/sda1/g' -i /mnt/etc/fstab
+sed -i "s/data=writeback,//" /mnt/etc/fstab
+mkdir -p /mnt/media/mmc
+echo "/dev/mmcblk0p1        /media/mmc   ext4    defaults        0       0" >> /mnt/etc/fstab
+echo "/media/mmc/boot   /boot   none    bind        0       0" >> /mnt/etc/fstab
