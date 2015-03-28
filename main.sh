@@ -172,8 +172,8 @@ echo "Building $VERSION."
 fetch_from_github "$BOOTLOADER_REPOSITORY" "$BOOTSOURCE"
 fetch_from_github "$LINUXKERNEL_REPOSITORY" "$LINUXSOURCE"
 fetch_from_github "$TOOLS_REPOSITORY" "$TOOLSSOURCE"
-fetch_from_github "$EXODRIVER_REPOSITORY" "$LABJACKSOURCE"
-fetch_from_github "$PYA20LIME2S_REPOSITORY" "$PYA20LIME2SOURCE"
+fetch_from_github "$EXODRIVER_REPOSITORY" "$EXODRIVERSOURCE"
+fetch_from_github "$LABJACK_REPOSITORY" "$LABJACKSOURCE"
 
 
 #--------------------------------------------------------------------------------------------------------------------------------
