@@ -27,7 +27,7 @@ index a13913f..f26f012 100644
 --- a/drivers/spi/Makefile
 +++ b/drivers/spi/Makefile
 @@ -64,4 +64,4 @@ obj-$(CONFIG_SPI_TXX9)			+= spi-txx9.o
- obj-$(CONFIG_SPI_XILINX)		+= spi-xilinx.o
+ obj-$(CONFIG_SPI_XILINX)			+= spi-xilinx.o
  obj-$(CONFIG_SPI_SUN4I)			+= spi_sunxi.o
  obj-$(CONFIG_SPI_SUN5I)			+= spi_sunxi.o
 -
