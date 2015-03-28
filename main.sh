@@ -49,12 +49,11 @@ KERNELDEST=$DEST/kernel
 mkdir -p $KERNELDEST
 
 # source tmeslogger
+SRCTMESLOGGER=$SRC/tmeslogger
 if [ ! -d "$SRCTMESLOGGER" ]; then
 	echo "TMESLogger source code not available!"
 	exit
 fi
-
-SRCTMESLOGGER=$SRC/tmeslogger
 
 # source tmeslogger scripts
 SRCTMESLOGGERSCRIPTS=$SRC/tmeslogger/scripts
