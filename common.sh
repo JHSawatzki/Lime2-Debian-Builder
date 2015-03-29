@@ -31,7 +31,7 @@ download_host_packages () {
 
 	debconf-apt-progress -- apt-get -y install pv bc lzop zip binfmt-support bison build-essential ccache debootstrap flex gawk
 	debconf-apt-progress -- apt-get -y install gcc-arm-linux-gnueabihf lvm2 qemu-user-static u-boot-tools uuid-dev zlib1g-dev unzip
-	debconf-apt-progress -- apt-get -y install libusb-1.0-0 libusb-1.0-0-dev parted pkg-config expect gcc-arm-linux-gnueabi libncurses5-dev
+	debconf-apt-progress -- apt-get -y install libusb-1.0-0 libusb-1.0-0-dev parted pkg-config expect gcc-arm-linux-gnueabi libncurses5-dev sqlite3
 }
 
 
@@ -330,6 +330,19 @@ install_kernel () {
 
 	# add linux firmwares to output image
 	unzip $BUILDER/bin/linux-firmware.zip -d $SDCARD/lib/firmware
+
+	#TODO custom, update, upgrade
+	#chroot_sdcard_lang "DEBIAN_FRONTEND=noninteractive apt-get -y update"
+	#chroot_sdcard_lang "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes upgrade"
+	#rm $SDCARD/usr/share/nginx/www/50x.html
+	#rm $SDCARD/usr/share/nginx/www/index.html
+	# clean deb cache
+	#chroot_sdcard "apt-get -y clean"
+	if [[ $U6PRO == "yes" ]]; then
+		sqlite3 $SDCARD/usr/local/tmeslogger/tmeslogger.db "UPDATE loggerStatus SET tlvalue='yes' WHERE tlkey='u6pro'"
+	fi
+
+	sqlite3 $SDCARD/usr/local/tmeslogger/tmeslogger.db "UPDATE loggerStatus SET tlvalue='$(date +%Y-%m-%d)' WHERE tlkey='currentDay'"
 }
 
 
@@ -497,18 +510,13 @@ END
 		chroot_sdcard "chown tmeslogger:tmeslogger /usr/local/tmeslogger/scripts"
 
 		#Proprietary code
-		if [[ $U6PRO == "yes" ]]; then
-			cp $SRCTMESLOGGER/tmeslogger_u6pro.sql $SDCARD/usr/local/tmeslogger/tmeslogger.sql
-		else
-			cp $SRCTMESLOGGER/tmeslogger.sql $SDCARD/usr/local/tmeslogger/tmeslogger.sql
-		fi
+		cp $SRCTMESLOGGER/tmeslogger.sql $SDCARD/usr/local/tmeslogger/tmeslogger.sql
 
 		#Setup db
 		chroot_sdcard "sqlite3 /usr/local/tmeslogger/tmeslogger.db < /usr/local/tmeslogger/tmeslogger.sql"
 		chroot_sdcard "chown tmeslogger:tmeslogger /usr/local/tmeslogger/tmeslogger.db"
 		chroot_sdcard "chmod 0660 /usr/local/tmeslogger/tmeslogger.db"
 		rm $SDCARD/usr/local/tmeslogger/tmeslogger.sql
-		chroot_sdcard "sqlite3 /usr/local/tmeslogger/tmeslogger.db \"UPDATE loggerStatus SET tlvalue='$(date +%Y-%m-%d)' WHERE tlkey='currentDay'\""
 
 		#Setup scripts
 		cp $SRCTMESLOGGERSCRIPTS/batteryChecker.sh $SDCARD/usr/local/tmeslogger/scripts
@@ -703,7 +711,7 @@ EOT
 		sed -e "s/MAX_SPEED=\"0\"/MAX_SPEED=\"1010000\"/g" -i $SDCARD/etc/init.d/cpufrequtils
 		sed -e 's/ondemand/interactive/g' -i $SDCARD/etc/init.d/cpufrequtils
 
-			# root-fs modifications
+		# root-fs modifications
 		echo $MOTD_MSG > $SDCARD/etc/motd
 
 		# set hostname
@@ -810,6 +818,7 @@ closing_image (){
 	rm $SDCARD/var/cache/apt/*
 	rm $SDCARD/var/lib/apt/lists/*
 
+	chroot_sdcard "unset DEBIAN_FRONTEND"
 	chroot_sdcard "sync"
 	sync
 	sleep 3
