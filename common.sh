@@ -230,7 +230,7 @@ compile_kernel () {
 	make -j1 deb-pkg KDEB_PKGVERSION=$REVISION LOCALVERSION="-lime2" KBUILD_DEBARCH=armhf ARCH=arm DEBFULLNAME="$MAINTAINER" DEBEMAIL="$MAINTAINER_MAIL" CROSS_COMPILE=arm-linux-gnueabihf-
 
 	# we need a name
-	CHOOSEN_KERNEL=$VER"-"$CONFIG_LOCALVERSION"-lime2-"$KERNEL_BRANCH".tar"
+	CHOOSEN_KERNEL=$VER"-"$CONFIG_LOCALVERSION"lime2-"$KERNEL_BRANCH".tar"
 	if [ -f "$KERNELDEST/$CHOOSEN_KERNEL" ]; then
 		rm $KERNELDEST"/"$CHOOSEN_KERNEL
 	fi
@@ -683,7 +683,7 @@ EOT
 		# copy and create symlink to default interfaces configuration
 		/bin/cp -f $BUILDER/config/interfaces $SDCARD/etc/network/
 
-		chroot_sdcard_lang "apt-get -y -qq remove alsa-base && apt-get -y -qq autoremove"
+		chroot_sdcard_lang "apt-get -y -qq remove lirc alsa-utils alsa-base && apt-get -y -qq autoremove"
 
 		# add irq to second core - rc.local
 		head -n -1 $SDCARD/etc/rc.local > /tmp/out
