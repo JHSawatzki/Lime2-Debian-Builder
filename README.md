@@ -1,6 +1,7 @@
 Application specific Debian Wheezy builder with custom kernel for Olimex A20 Lime2 board
 
 Based on [https://github.com/igorpecovnik/lib](https://github.com/igorpecovnik/lib) by Igor Pecovnik
+
 Partial code and inspiration from [https://github.com/pullmoll/lib](https://github.com/pullmoll/lib) by Jürgen Buchmüller
 
 License: GPLv2

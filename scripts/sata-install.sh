@@ -110,6 +110,7 @@ else
 	if [ -f /boot/boot-next.cmd ]; then
 		mkimage -C none -A arm -T script -d /boot/boot-next.cmd /boot/boot.scr
 	fi
+	#TODO uEnv
 fi
 # change fstab
 sed -e 's/mmcblk0p1/sda1/g' -i /mnt/etc/fstab
