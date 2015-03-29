@@ -399,6 +399,14 @@ create_image_template (){
 		# enable arm binary format so that the cross-architecture chroot environment will work
 		test -e /proc/sys/fs/binfmt_misc/qemu-arm || update-binfmts --enable qemu-arm
 
+		# Install, if missing, the debian-archive-keyring.gpg
+		if [ ! -f $SDCARD/usr/share/keyrings/debian-archive-keyring.gpg ]; then
+			mkdir -pv $SDCARD/usr/share/keyrings
+			cp $BUILDER/bin/debian-archive-keyring.gpg $SDCARD/usr/share/keyrings/debian-archive-keyring.gpg
+			chmod 0400 $SDCARD/usr/share/keyrings/debian-archive-keyring.gpg
+		fi
+		
+
 		# debootstrap second stage
 		chroot_sdcard_lang "/debootstrap/debootstrap --second-stage"
 
@@ -411,12 +419,6 @@ create_image_template (){
 		# choose proper apt list
 		cp $BUILDER/config/sources.list $SDCARD/etc/apt/sources.list
 
-		# set up 'apt
-cat <<END > $SDCARD/etc/apt/apt.conf.d/71-no-recommends
-APT::Install-Recommends "0";
-APT::Install-Suggests "0";
-END
-
 		# update and upgrade
 		chroot_sdcard_lang "apt-get -y update"
 
@@ -426,6 +428,7 @@ END
 		chroot_sdcard_lang "locale-gen $DEST_LANG"
 		chroot_sdcard_lang "export LC_ALL=POSIX LANG=$DEST_LANG LANGUAGE=$DEST_LANG DEBIAN_FRONTEND=noninteractive"
 		chroot_sdcard_lang "update-locale LC_ALL=POSIX LANG=$DEST_LANG LANGUAGE=$DEST_LANG LC_MESSAGES=POSIX"
+		chroot_sdcard_lang "dpkg-reconfigure locales"
 
 		# install aditional packages
 		PAKETE="automake bash-completion bc build-essential cmake cpufrequtils curl dosfstools e2fsprogs evtest figlet fping git git-core haveged hddtemp hdparm htop i2c-tools iperf iotop less libtool libusb-1.0-0 libwrap0-dev libfuse2 libssl-dev logrotate lsof makedev module-init-tools nano ntp parted pkg-config pciutils pv python-smbus rsync screen stress sudo sysfsutils toilet u-boot-tools unzip usbutils wget"
@@ -450,27 +453,22 @@ END
 		PAKETE_TMESLOGGER="ca-certificates dhcp3-client libusb-1.0-0-dev nginx php5-common php5-fpm php5-json php5-mcrypt php5-sqlite proftpd-basic python2.7 python2.7-dev python-sqlite resolvconf rsyslog sqlite3"
 		chroot_sdcard_lang "debconf-apt-progress -- apt-get -y install $PAKETE_TMESLOGGER"
 
-		chroot_sdcard "service ssh stop"
-		chroot_sdcard "service proftpd stop"
-		chroot_sdcard "service nginx stop"
-		chroot_sdcard "service php5-fpm stop"
-		chroot_sdcard "service ntp stop"
+		# set up 'apt
+cat <<END > $SDCARD/etc/apt/apt.conf.d/71-no-recommends
+APT::Install-Recommends "0";
+APT::Install-Suggests "0";
+END
+
+		chroot_sdcard_lang "service ssh stop"
+		chroot_sdcard_lang "service proftpd stop"
+		chroot_sdcard_lang "service nginx stop"
+		chroot_sdcard_lang "service php5-fpm stop"
+		chroot_sdcard_lang "service ntp stop"
 
 		sed -e 's/^#Subsystem/Subsystem/g' -i $SDCARD/etc/ssh/sshd_config
 
 		cp $BUILDER/config/if-up.d/ntp $SDCARD/etc/network/if-up.d
 		chroot_sdcard "chmod +x /etc/network/if-up.d/ntp"
-
-		#Config user tmeslogger
-		chroot_sdcard "adduser --system --home /usr/local/tmeslogger --group --disabled-password --disabled-login tmeslogger"
-		chroot_sdcard "chmod 0770 /usr/local/tmeslogger"
-		chroot_sdcard "usermod -a -G ftp tmeslogger"
-		chroot_sdcard "usermod -a -G adm tmeslogger"
-		chroot_sdcard "usermod -a -G tmeslogger ftp"
-		chroot_sdcard "usermod -a -G tmeslogger www-data"
-		chroot_sdcard "usermod -a -G sudo www-data"
-		mkdir $SDCARD/var/log/tmeslogger
-		chroot_sdcard "chown tmeslogger:tmeslogger /var/log/tmeslogger/"
 
 		cp $BUILDER/scripts/dofstrim $SDCARD/etc/cron.weekly/dofstrim
 		chroot_sdcard "chmod +x /etc/cron.weekly/dofstrim"
@@ -493,12 +491,23 @@ END
 		rm $SDCARD/srv/ftp/welcome.msg
 		cp $BUILDER/config/if-up.d/proftpd $SDCARD/etc/network/if-up.d
 		chroot_sdcard "chmod +x /etc/network/if-up.d/proftpd"
-		chroot_sdcard "echo ftp:$ROOTPWD | chpasswd"
-		chroot_sdcard "groupadd ftp"
-		chroot_sdcard "usermod -g ftp ftp"
+		chroot_sdcard_lang "echo ftp:$ROOTPWD | chpasswd"
+		chroot_sdcard_lang "groupadd ftp"
+		chroot_sdcard_lang "usermod -g ftp ftp"
 		chroot_sdcard "chown ftp:ftp /srv/ftp"
 		chroot_sdcard "chmod 0770 /srv/ftp"
 
+		#Config user tmeslogger
+		chroot_sdcard_lang "adduser --system --home /usr/local/tmeslogger --group --disabled-password --disabled-login tmeslogger"
+		chroot_sdcard "chmod 0770 /usr/local/tmeslogger"
+		chroot_sdcard_lang "usermod -a -G ftp tmeslogger"
+		chroot_sdcard_lang "usermod -a -G adm tmeslogger"
+		chroot_sdcard_lang "usermod -a -G tmeslogger ftp"
+		chroot_sdcard_lang "usermod -a -G tmeslogger www-data"
+		chroot_sdcard_lang "usermod -a -G sudo www-data"
+		mkdir $SDCARD/var/log/tmeslogger
+		chroot_sdcard "chown tmeslogger:tmeslogger /var/log/tmeslogger/"
+		
 		#Logrotate
 		/bin/cp -f $BUILDER/config/logrotate.conf $SDCARD/etc/logrotate.conf
 		/bin/cp -f $BUILDER/config/logrotate.d/rsyslog $SDCARD/etc/logrotate.d/rsyslog
