@@ -668,7 +668,7 @@ END
 
 		# change time zone data
 		echo $TZDATA > $SDCARD/etc/timezone
-		chroot_sdcard "dpkg-reconfigure -f noninteractive tzdata"
+		chroot_sdcard_lang "dpkg-reconfigure -f noninteractive tzdata"
 
 		# set root password
 		chroot_sdcard "(echo $ROOTPWD;echo $ROOTPWD;) | passwd root"
@@ -819,6 +819,7 @@ fingerprint_image (){
 closing_image (){
 	echo "------ Closing image"
 
+	set +e
 	rm $SDCARD/usr/share/info/dir.old
 	rm $SDCARD/var/cache/debconf/*.dat-old
 	rm $SDCARD/var/log/{bootstrap,dpkg}.log
@@ -826,6 +827,7 @@ closing_image (){
 	for a in $SDCARD/var/log/{*.log,apt/*.log,debug,dmesg,faillog,messages,syslog,wtmp}; do echo -n > $a; done
 	rm $SDCARD/var/cache/apt/*
 	rm $SDCARD/var/lib/apt/lists/*
+	set -e
 
 	chroot_sdcard "unset DEBIAN_FRONTEND"
 	chroot_sdcard "sync"
