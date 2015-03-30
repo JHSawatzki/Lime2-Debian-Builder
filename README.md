@@ -64,7 +64,6 @@ TZDATA="UTC"								# Timezone
 HOST="tmeslogger"							# hostname
 ROOTPWD="tmeslogger"						# root password
 MOTD_MSG="Welcome to TMESLogger!"
-CERTINFO="tmes"
 
 
 #---------------------------------------------------------------------------------------
