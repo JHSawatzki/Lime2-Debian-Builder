@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # To find which FS support trim, we check that DISC-MAX (discard max bytes)
 # is great than zero. Check discard_max_bytes documentation at

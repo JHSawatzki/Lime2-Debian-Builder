@@ -593,7 +593,7 @@ END
 		chroot_sdcard "insserv processRebootAndShutdown >> /dev/null"
 
 		#Web
-		cp -r $SRCTMESLOGGER/web/ $SDCARD/usr/share/nginx/www/
+		cp -r $SRCTMESLOGGER/web/* $SDCARD/usr/share/nginx/www/
 
 		#Copy Exodriver
 		cp -r $SOURCES/$EXODRIVERSOURCE $SDCARD/root/
@@ -647,7 +647,6 @@ END
 		# scripts for autoresize at first boot
 		cp $BUILDER/scripts/resize2fs $SDCARD/etc/init.d/
 		cp $BUILDER/scripts/firstrun $SDCARD/etc/init.d/
-		sed -e "s/tm\*\*/$CERTINFO/g" -i $SDCARD/etc/init.d/firstrun
 		chroot_sdcard "chmod +x /etc/init.d/firstrun"
 		chroot_sdcard "chmod +x /etc/init.d/resize2fs"
 		chroot_sdcard "insserv firstrun >> /dev/null"
@@ -697,6 +696,10 @@ EOT
 		# script to install to SATA
 		cp $BUILDER/scripts/sata-install.sh $SDCARD/root/
 		chroot_sdcard "chmod +x /root/sata-install.sh"
+
+		# script to init tmeslogger
+		cp $BUILDER/scripts/tmeslogger-init.sh $SDCARD/root/
+		chroot_sdcard "chmod +x /root/tmeslogger-init.sh"
 
 		# copy and create symlink to default interfaces configuration
 		/bin/cp -f $BUILDER/config/interfaces $SDCARD/etc/network/
