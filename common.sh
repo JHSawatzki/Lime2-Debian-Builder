@@ -299,7 +299,7 @@ install_kernel () {
 	cd $SRC
 
 	# recompile headers scripts
-	chroot_sdcard "cd /usr/src/linux-headers-$CHOOSEN_KERNEL && make headers_check; make headers_install ; make scripts"
+	chroot_sdcard_lang "cd /usr/src/linux-headers-$CHOOSEN_KERNEL && make headers_check; make headers_install ; make scripts"
 
 	# recreate boot.scr if using kernel for different board. Mainline only
 	if [[ $KERNEL_BRANCH == "mainline" ]]; then
@@ -329,7 +329,7 @@ install_kernel () {
 	fi
 
 	# add linux firmwares to output image
-	unzip $BUILDER/bin/linux-firmware.zip -d $SDCARD/lib/firmware
+	#unzip $BUILDER/bin/linux-firmware.zip -d $SDCARD/lib/firmware
 
 	#TODO custom, update, upgrade
 	#chroot_sdcard_lang "DEBIAN_FRONTEND=noninteractive apt-get -y update"
@@ -351,7 +351,7 @@ install_kernel () {
 #--------------------------------------------------------------------------------------------------------------------------------
 create_image_template (){
 	if [ ! -f "$ROOTFS/wheezy.raw.gz" ]; then
-		echo "------ Debootstrap wheezy to image template"
+		echo "------ Create image template"
 
 		# create image file
 		dd if=/dev/zero of=$ROOTFS/wheezy.raw bs=1M count=$SDSIZE status=noxfer
@@ -657,7 +657,7 @@ END
 
 		# install ramlog only on wheezy
 		cp $BUILDER/bin/ramlog_2.0.0_all.deb $SDCARD/tmp/
-		chroot_sdcard "dpkg -i /tmp/ramlog_2.0.0_all.deb"
+		chroot_sdcard_lang "dpkg -i /tmp/ramlog_2.0.0_all.deb"
 		rm $SDCARD/tmp/ramlog_2.0.0_all.deb
 		sed -e 's/TMPFS_RAMFS_SIZE=/TMPFS_RAMFS_SIZE=512m/g' -i $SDCARD/etc/default/ramlog
 		sed -e 's/# Required-Start:    $remote_fs $time/# Required-Start:    $remote_fs $time ramlog/g' -i $SDCARD/etc/init.d/rsyslog
@@ -762,6 +762,7 @@ EOT
 # Mount prepared root file-system
 #--------------------------------------------------------------------------------------------------------------------------------
 mount_existing_image (){
+	echo "------ Mount image"
 	gzip -dc < $ROOTFS/wheezy.raw.gz > $DEST/debian_rootfs.raw
 
 	# find first avaliable free device
@@ -774,6 +775,7 @@ mount_existing_image (){
 	e2label $LOOP "lime2"
 
 	# mount image to already prepared mount point
+	mkdir -p $SDCARD
 	mount -t ext4 $LOOP $SDCARD/
 
 	# mount proc, sys and dev
@@ -820,7 +822,6 @@ closing_image (){
 	rm $SDCARD/usr/share/info/dir.old
 	rm $SDCARD/var/cache/debconf/*.dat-old
 	rm $SDCARD/var/log/{bootstrap,dpkg}.log
-	rm $SDCARD/var/log/*.?
 	rm $SDCARD/tmp/*
 	for a in $SDCARD/var/log/{*.log,apt/*.log,debug,dmesg,faillog,messages,syslog,wtmp}; do echo -n > $a; done
 	rm $SDCARD/var/cache/apt/*
