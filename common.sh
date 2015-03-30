@@ -434,7 +434,7 @@ create_image_template (){
 		# install aditional packages
 		PAKETE="automake bash-completion bc build-essential cmake cpufrequtils curl dosfstools e2fsprogs evtest figlet fping git git-core haveged hddtemp hdparm htop i2c-tools iperf iotop less libtool libusb-1.0-0 libwrap0-dev libfuse2 libssl-dev logrotate lsof makedev module-init-tools nano ntp parted pkg-config pciutils pv python-smbus rsync screen stress sudo sysfsutils toilet u-boot-tools unzip usbutils wget"
 		chroot_sdcard_lang "debconf-apt-progress -- apt-get -y install $PAKETE"
-		
+
 		# install console setup separate
 		chroot_sdcard_lang "DEBIAN_FRONTEND=noninteractive apt-get -y install console-setup console-data kbd console-common unicode-data"
 
@@ -618,7 +618,7 @@ END
 		fi
 		tar -zxvf $CHILKATSOURCE.tar.gz
 		mv $SOURCES/$CHILKATSOURCE/_chilkat.so $SDCARD/usr/local/lib/python2.7/dist-packages/
-		mv $SOURCES$CHILKATSOURCE/chilkat.py $SDCARD/usr/local/lib/python2.7/dist-packages/
+		mv $SOURCES/$CHILKATSOURCE/chilkat.py $SDCARD/usr/local/lib/python2.7/dist-packages/
 		rm -r $CHILKATSOURCE
 		cd $SRC
 
@@ -706,12 +706,10 @@ EOT
 		# add irq to second core - rc.local
 		head -n -1 $SDCARD/etc/rc.local > /tmp/out
 		echo 'echo 2 > /proc/irq/$(cat /proc/interrupts | grep eth0 | cut -f 1 -d ":" | tr -d " ")/smp_affinity' >> /tmp/out
-		if [[ $TMESLOGGER_INSTALL == "yes" ]]; then
-			echo 'echo ds1307 0x68 > /sys/class/i2c-adapter/i2c-2/new_device' >> /tmp/out
-			echo 'hwclock -s' >> /tmp/out
-			echo 'echo none > /sys/class/leds/green\:ph02\:led1/trigger' >> /tmp/out
-			echo 'echo 255 > /sys/class/leds/green\:ph02\:led1/brightness' >> /tmp/out
-		fi
+		echo 'echo ds1307 0x68 > /sys/class/i2c-adapter/i2c-2/new_device' >> /tmp/out
+		echo 'hwclock -s' >> /tmp/out
+		echo 'echo none > /sys/class/leds/green\:ph02\:led1/trigger' >> /tmp/out
+		echo 'echo 255 > /sys/class/leds/green\:ph02\:led1/brightness' >> /tmp/out
 		echo 'exit 0' >> /tmp/out
 		mv /tmp/out $SDCARD/etc/rc.local
 		chroot_sdcard "chmod +x /etc/rc.local"
