@@ -340,6 +340,7 @@ install_kernel () {
 	#chroot_sdcard "apt-get -y clean"
 	if [[ $U6PRO == "yes" ]]; then
 		sqlite3 $SDCARD/usr/local/tmeslogger/tmeslogger.db "UPDATE loggerStatus SET tlvalue='yes' WHERE tlkey='u6pro'"
+		sqlite3 $SDCARD/usr/local/tmeslogger/tmeslogger.db "UPDATE loggerStatus SET tlvalue='9' WHERE tlkey='resolutionIndex'"
 	fi
 
 	sqlite3 $SDCARD/usr/local/tmeslogger/tmeslogger.db "UPDATE loggerStatus SET tlvalue='$(date +%Y-%m-%d)' WHERE tlkey='currentDay'"
