@@ -113,7 +113,7 @@ patching_sources() {
 	if [ "$(patch --dry-run -t -p1 < $BUILDER/patch/compiler.patch | grep Reversed)" != "" ]; then
 		patch --batch -t -p1 < $BUILDER/patch/compiler.patch
 	fi
-	
+
 	cd $SRC
 }
 
@@ -154,9 +154,9 @@ compile_uboot () {
 choosing_uboot () {
 	cd $BOOTDEST
 	if [[ $KERNEL_BRANCH == "mainline" ]]; then
-		MYLIST=`for x in $(ls -1 *mainline*.tar); do echo $x " -"; done`
+		MYLIST=`for x in $(ls -1 *mainline*.tgz); do echo $x " -"; done`
 	else
-		MYLIST=`for x in $(ls -1 *.tar | grep -v mainline); do echo $x " -"; done`
+		MYLIST=`for x in $(ls -1 *.tgz | grep -v mainline); do echo $x " -"; done`
 	fi
 	WC=`echo $MYLIST | wc -l`
 	if [[ $WC -ne 0 ]]; then
@@ -399,13 +399,13 @@ create_image_template (){
 		# enable arm binary format so that the cross-architecture chroot environment will work
 		test -e /proc/sys/fs/binfmt_misc/qemu-arm || update-binfmts --enable qemu-arm
 
+		#TODO does not work
 		# Install, if missing, the debian-archive-keyring.gpg
 		if [ ! -f $SDCARD/usr/share/keyrings/debian-archive-keyring.gpg ]; then
 			mkdir -pv $SDCARD/usr/share/keyrings
 			cp $BUILDER/bin/debian-archive-keyring.gpg $SDCARD/usr/share/keyrings/debian-archive-keyring.gpg
 			chmod 0400 $SDCARD/usr/share/keyrings/debian-archive-keyring.gpg
 		fi
-		
 
 		# debootstrap second stage
 		chroot_sdcard_lang "/debootstrap/debootstrap --second-stage"
@@ -428,7 +428,8 @@ create_image_template (){
 		chroot_sdcard_lang "locale-gen $DEST_LANG"
 		chroot_sdcard_lang "export LC_ALL=POSIX LANG=$DEST_LANG LANGUAGE=$DEST_LANG DEBIAN_FRONTEND=noninteractive"
 		chroot_sdcard_lang "update-locale LC_ALL=POSIX LANG=$DEST_LANG LANGUAGE=$DEST_LANG LC_MESSAGES=POSIX"
-		chroot_sdcard_lang "dpkg-reconfigure locales"
+		#TODO not needed?
+		#chroot_sdcard_lang "dpkg-reconfigure locales"
 
 		# install aditional packages
 		PAKETE="automake bash-completion bc build-essential cmake cpufrequtils curl dosfstools e2fsprogs evtest figlet fping git git-core haveged hddtemp hdparm htop i2c-tools iperf iotop less libtool libusb-1.0-0 libwrap0-dev libfuse2 libssl-dev logrotate lsof makedev module-init-tools nano ntp parted pkg-config pciutils pv python-smbus rsync screen stress sudo sysfsutils toilet u-boot-tools unzip usbutils wget"
