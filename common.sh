@@ -595,6 +595,8 @@ END
 
 		#Web
 		cp -r $SRCTMESLOGGER/web/* $SDCARD/usr/share/nginx/www/
+		chroot_sdcard "find /usr/share/nginx/www/ -type d -exec chmod 755 {} +"
+		chroot_sdcard "find /usr/share/nginx/www/ -type f -exec chmod 644 {} +"
 
 		#Copy Exodriver
 		cp -r $SOURCES/$EXODRIVERSOURCE $SDCARD/root/
