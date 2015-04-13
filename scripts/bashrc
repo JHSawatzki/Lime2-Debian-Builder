@@ -28,7 +28,7 @@ fi
 if [[ -e '/dev/sda' && $SDA_TYPE == "ata" ]]; then
 	HDDTEMP=$(/usr/sbin/hddtemp /dev/sda 2>&1)
 	if [ $? -eq 0 ]; then
-		HDDTEMP=$(echo ${HDDTEMP} | awk '{print $NF}')
+		HDDTEMP=$(echo ${HDDTEMP} | awk '{print $4}')
 		HDDFREE=$(df -h /dev/sda1 | grep sda | awk '{ print " / " $(NF-2)}')
 		if [ "${HDDFREE}" != "" ]; then
 			HDDFREE="${HDDFREE}"b
