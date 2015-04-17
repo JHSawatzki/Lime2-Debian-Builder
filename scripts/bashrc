@@ -6,7 +6,6 @@ OUT=""
 LOAD=$(w | sed -n 1p  | awk '{print $(NF-2), $(NF-1),$(NF-0)}')
 OUT="${OUT}Load: ${LOAD} "
 
-
 CEL=$(awk 'BEGIN { print "\302\260C"; }')
 if [ -d "/sys/devices/platform/sunxi-i2c.0/i2c-0/0-0034/" ]; then
 	TEMP=$(cat /sys/devices/platform/sunxi-i2c.0/i2c-0/0-0034/temp1_input)
@@ -15,9 +14,13 @@ if [ -d "/sys/devices/platform/sunxi-i2c.0/i2c-0/0-0034/" ]; then
 	if [ -f "/run/soc-temp" ]; then 
 		TEMP=$(cat /run/soc-temp)
 	fi
+	# if we are reading from A20
+	if [ -d "/sys/devices/platform/a20-tp-hwmon/" ]; then
+		TEMP=$(cat /sys/devices/platform/a20-tp-hwmon/temp1_input)
+		TEMP=$(echo "scale=1;${TEMP}/1000" | bc)
+	fi
 	OUT="${OUT}- Board: ${TEMP}${CEL} "
 fi
-
 
 if [ "$(cat /proc/partitions |grep sd)" != "" ]; then
 	SDA_TYPE=$(/sbin/udevadm info --query=all --name=sda | grep ID_BUS=)

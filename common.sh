@@ -55,10 +55,11 @@ fetch_from_github () {
 #--------------------------------------------------------------------------------------------------------------------------------
 patching_sources() {
 	# kernel
+	echo "------ Patching kernel sources."
 	cd $SOURCES/$LINUXSOURCE
 
 	# mainline
-	if [[ $KERNEL_BRANCH == "mainline" ]]; then
+	if [[ $KERNELBRANCH == "mainline" ]]; then
 		# Fix Kernel Tag
 		if [[ $KERNEL_TAG == "" ]]; then
 			git checkout master
@@ -77,36 +78,7 @@ patching_sources() {
 		fi
 	#sunxi
 	else
-		# if the source is already patched for banana, do reverse GMAC patch
-		if [ "$(cat arch/arm/kernel/setup.c | grep BANANAPI)" != "" ]; then
-			echo "Reversing Banana patch"
-			patch --batch -t -p1 < $BUILDER/patch/bananagmac.patch
-		fi
-
-		# deb packaging patch
-		if [ "$(patch --dry-run -t -p1 < $BUILDER/patch/packaging.patch | grep previ)" == "" ]; then
-			patch --batch -f -p1 < $BUILDER/patch/packaging.patch
-		fi
-
-		# gpio patch
-		if [ "$(patch --dry-run -t -p1 < $BUILDER/patch/gpio.patch | grep previ)" == "" ]; then
-			patch --batch -f -p1 < $BUILDER/patch/gpio.patch
-		fi
-
-		# I2C functionality for lime2
-		if [ "$(patch --dry-run -t -p1 < $BUILDER/patch/i2c.patch | grep previ)" == "" ]; then
-			patch --batch -f -p1 < $BUILDER/patch/i2c.patch
-		fi
-
-		# Temperature reading from A20 chip
-		if [ "$(patch --dry-run -t -p1 < $BUILDER/patch/a20-temp.patch | grep previ)" == "" ]; then
-			patch --batch -f -p1 < $BUILDER/patch/a20-temp.patch
-		fi
-
-		# SPI functionality
-		if [ "$(patch --dry-run -t -p1 < $BUILDER/patch/spi.patch | grep previ)" == "" ]; then
-			patch --batch -f -p1 < $BUILDER/patch/spi.patch
-		fi
+	
 	fi
 
 	# compiler reverse patch. It has already been fixed.
@@ -129,7 +101,7 @@ compile_uboot () {
 	# there are two methods of compilation
 	make $CTHREADS $BOOTCONFIG CONFIG_WATCHDOG=y CROSS_COMPILE=arm-linux-gnueabihf-
 
-	if [[ $KERNEL_BRANCH == "sunxi" ]]; then
+	if [[ $KERNELBRANCH == "sunxi" ]]; then
 		## patch mainline uboot configuration to boot with old kernels
 		echo "CONFIG_ARMV7_BOOT_SEC_DEFAULT=y" >> $SOURCES/$BOOTSOURCE/.config
 		echo "CONFIG_ARMV7_BOOT_SEC_DEFAULT=y" >> $SOURCES/$BOOTSOURCE/spl/.config
@@ -138,12 +110,44 @@ compile_uboot () {
 	fi
 
 	make $CTHREADS CONFIG_WATCHDOG=y CROSS_COMPILE=arm-linux-gnueabihf-
-	# create package
-	CHOOSEN_UBOOT=lime2_"$KERNEL_BRANCH"_u-boot_"$VER".tgz
-	if [ -f "$BOOTDEST/$CHOOSEN_UBOOT" ]; then
-		rm $BOOTDEST"/"$CHOOSEN_UBOOT
+
+	# create .deb package
+	#
+	CHOOSEN_UBOOT="linux-u-boot-$VER-lime2_"$REVISION"_"$KERNELBRANCH"-armhf"
+	mkdir -p $BOOTDEST/$CHOOSEN_UBOOT/usr/lib/$CHOOSEN_UBOOT
+	mkdir -p $BOOTDEST/$CHOOSEN_UBOOT/DEBIAN
+	# set up post install script
+cat <<END > $BOOTDEST/$CHOOSEN_UBOOT/DEBIAN/postinst
+#!/bin/bash
+set -e
+if [[ \$DEVICE == "" ]]; then DEVICE="/dev/mmcblk0"; fi
+( dd if=/usr/lib/$CHOOSEN_UBOOT/u-boot-sunxi-with-spl.bin of=\$DEVICE bs=1024 seek=8 status=noxfer ) > /dev/null 2>&1
+exit 0
+END
+
+	chmod 755 $BOOTDEST/$CHOOSEN_UBOOT/DEBIAN/postinst
+	# set up control file
+cat <<END > $BOOTDEST/$CHOOSEN_UBOOT/DEBIAN/control
+Package: linux-u-boot-$VER-lime2-$KERNELBRANCH-armhf
+Version: $REVISION
+Architecture: all
+Maintainer: $MAINTAINER <$MAINTAINERMAIL>
+Installed-Size: 1
+Section: kernel
+Priority: optional
+Description: Uboot loader
+END
+
+	cp u-boot-sunxi-with-spl.bin $BOOTDEST/$CHOOSEN_UBOOT/usr/lib/$CHOOSEN_UBOOT
+	
+	cd $BOOTDEST
+	CHOOSEN_UBOOT_DEB="linux-u-boot-$VER-lime2_"$REVISION"_"$KERNELBRANCH"-armhf".deb
+	if [ -f "$BOOTDEST/$CHOOSEN_UBOOT_DEB" ]; then
+		rm $BOOTDEST"/"$CHOOSEN_UBOOT_DEB
 	fi
-	tar cPfz $BOOTDEST"/"$CHOOSEN_UBOOT u-boot-sunxi-with-spl.bin
+	dpkg -b $CHOOSEN_UBOOT
+	rm -rf $CHOOSEN_UBOOT
+	CHOOSEN_UBOOT=$CHOOSEN_UBOOT_DEB
 
 	cd $SRC
 }
@@ -153,10 +157,10 @@ compile_uboot () {
 #--------------------------------------------------------------------------------------------------------------------------------
 choosing_uboot () {
 	cd $BOOTDEST
-	if [[ $KERNEL_BRANCH == "mainline" ]]; then
-		MYLIST=`for x in $(ls -1 *mainline*.tgz); do echo $x " -"; done`
+	if [[ $KERNELBRANCH == "mainline" ]]; then
+		MYLIST=`for x in $(ls -1 *mainline*.deb); do echo $x " -"; done`
 	else
-		MYLIST=`for x in $(ls -1 *.tgz | grep -v mainline); do echo $x " -"; done`
+		MYLIST=`for x in $(ls -1 *.deb | grep -v mainline); do echo $x " -"; done`
 	fi
 	WC=`echo $MYLIST | wc -l`
 	if [[ $WC -ne 0 ]]; then
@@ -230,7 +234,7 @@ compile_kernel () {
 	make -j1 deb-pkg KDEB_PKGVERSION=$REVISION LOCALVERSION="-lime2" KBUILD_DEBARCH=armhf ARCH=arm DEBFULLNAME="$MAINTAINER" DEBEMAIL="$MAINTAINER_MAIL" CROSS_COMPILE=arm-linux-gnueabihf-
 
 	# we need a name
-	CHOOSEN_KERNEL=$VER"-"$CONFIG_LOCALVERSION"lime2-"$KERNEL_BRANCH".tar"
+	CHOOSEN_KERNEL=$VER"-"$CONFIG_LOCALVERSION"lime2-"$KERNELBRANCH".tar"
 	if [ -f "$KERNELDEST/$CHOOSEN_KERNEL" ]; then
 		rm $KERNELDEST"/"$CHOOSEN_KERNEL
 	fi
@@ -250,7 +254,7 @@ compile_kernel () {
 #--------------------------------------------------------------------------------------------------------------------------------
 choosing_kernel () {
 	cd $KERNELDEST
-	if [[ $KERNEL_BRANCH == "mainline" ]]; then
+	if [[ $KERNELBRANCH == "mainline" ]]; then
 		MYLIST=`for x in $(ls -1 *mainline*.tar); do echo $x " -"; done`
 	else
 		MYLIST=`for x in $(ls -1 *.tar | grep -v mainline); do echo $x " -"; done`
@@ -273,7 +277,7 @@ install_kernel () {
 	echo "------ Install kernel"
 
 	# create modules file
-	if [[ $KERNEL_BRANCH == "mainline" ]]; then
+	if [[ $KERNELBRANCH == "mainline" ]]; then
 		for word in $MODULES_MAINLINE; do echo $word >> $SDCARD/etc/modules; done
 	else
 		for word in $MODULES_SUNXI; do echo $word >> $SDCARD/etc/modules; done
@@ -282,15 +286,17 @@ install_kernel () {
 	# install kernel
 	rm -rf /tmp/kernel && mkdir -p /tmp/kernel && cd /tmp/kernel
 	tar -xPf $KERNELDEST"/"$CHOOSEN_KERNEL
+	cp $BOOTDEST"/"$CHOOSEN_UBOOT /tmp/kernel/
 	mount --bind /tmp/kernel/ $SDCARD/tmp
+	chroot_sdcard "dpkg -i /tmp/*u-boot*.deb"
 	chroot_sdcard "dpkg -i /tmp/*image*.deb"
 	chroot_sdcard "dpkg -i /tmp/*headers*.deb"
-	if [[ $KERNEL_BRANCH == "mainline" ]]; then
+	if [[ $KERNELBRANCH == "mainline" ]]; then
 		chroot_sdcard "dpkg -i /tmp/*dtb*.deb"
 	fi
 
 	# name of archive is also kernel name
-	CHOOSEN_KERNEL="${CHOOSEN_KERNEL//-$KERNEL_BRANCH.tar/}"
+	CHOOSEN_KERNEL="${CHOOSEN_KERNEL//-$KERNELBRANCH.tar/}"
 
 	echo "------ Compile headers scripts"
 	# patch scripts
@@ -302,7 +308,7 @@ install_kernel () {
 	chroot_sdcard_lang "cd /usr/src/linux-headers-$CHOOSEN_KERNEL && make headers_check; make headers_install ; make scripts"
 
 	# recreate boot.scr if using kernel for different board. Mainline only
-	if [[ $KERNEL_BRANCH == "mainline" ]]; then
+	if [[ $KERNELBRANCH == "mainline" ]]; then
 		# remove .old on new image
 		rm -rf $SDCARD/boot/dtb.old
 
@@ -433,7 +439,7 @@ create_image_template (){
 		#chroot_sdcard_lang "dpkg-reconfigure locales"
 
 		# install aditional packages
-		PAKETE="automake bash-completion bc build-essential cmake cpufrequtils curl dosfstools e2fsprogs evtest figlet fping git git-core haveged hddtemp hdparm htop i2c-tools iperf iotop less libtool libusb-1.0-0 libwrap0-dev libfuse2 libssl-dev logrotate lsof makedev module-init-tools nano ntp parted pkg-config pciutils pv python-smbus rsync screen stress sudo sysfsutils toilet u-boot-tools unzip usbutils wget"
+		PAKETE="automake bash-completion bc build-essential cmake cpufrequtils curl device-tree-compiler dosfstools e2fsprogs evtest figlet fping git git-core haveged hddtemp hdparm htop i2c-tools iperf iotop less libtool libusb-1.0-0 libwrap0-dev libfuse2 libssl-dev logrotate lsof makedev module-init-tools nano ntp parted pkg-config pciutils pv python-smbus rsync screen stress sudo sysfsutils toilet u-boot-tools unzip usbutils wget"
 		chroot_sdcard_lang "debconf-apt-progress -- apt-get -y install $PAKETE"
 
 		# install console setup separate
@@ -654,10 +660,18 @@ END
 		chroot_sdcard "chmod +x /etc/init.d/resize2fs"
 		chroot_sdcard "insserv firstrun >> /dev/null"
 
-		# install custom bashrc
-		cat $BUILDER/scripts/bashrc >> $SDCARD/etc/bash.bashrc
+		# install custom bashrc and hardware dependent motd
+		cat $BUILDER/scripts/bashrc >> $SDCARD/etc/bash.bashrc 
+		cp $BUILDER/scripts/armhwinfo $SDCARD/etc/init.d/
+		chroot_sdcard "chmod +x /etc/init.d/armhwinfo"
+		chroot_sdcard -c "insserv armhwinfo >> /dev/null" 
 
-		# install ramlog only on wheezy
+		if [ -f "$SDCARD/etc/init.d/motd" ]; then
+			sed -e s,"# Update motd","insserv armhwinfo >> /dev/null",g -i $SDCARD/etc/init.d/motd
+			sed -e s,"uname -snrvm > /var/run/motd.dynamic","",g -i $SDCARD/etc/init.d/motd
+		fi
+
+		# install ramlog
 		cp $BUILDER/bin/ramlog_2.0.0_all.deb $SDCARD/tmp/
 		chroot_sdcard_lang "dpkg -i /tmp/ramlog_2.0.0_all.deb"
 		rm $SDCARD/tmp/ramlog_2.0.0_all.deb
@@ -709,9 +723,8 @@ EOT
 
 		chroot_sdcard_lang "apt-get -y -qq remove lirc alsa-utils alsa-base && apt-get -y -qq autoremove"
 
-		# add irq to second core - rc.local
+		# rc.local
 		head -n -1 $SDCARD/etc/rc.local > /tmp/out
-		echo 'echo 2 > /proc/irq/$(cat /proc/interrupts | grep eth0 | cut -f 1 -d ":" | tr -d " ")/smp_affinity' >> /tmp/out
 		echo 'echo ds1307 0x68 > /sys/class/i2c-adapter/i2c-2/new_device' >> /tmp/out
 		echo 'hwclock -s' >> /tmp/out
 		echo 'echo none > /sys/class/leds/green\:ph02\:led1/trigger' >> /tmp/out
@@ -850,7 +863,7 @@ closing_image (){
 	# let's create nice file name
 	VERSION=$VERSION" "$VER
 	VERSION="${VERSION// /_}"
-	VERSION="${VERSION//$KERNEL_BRANCH/}"
+	VERSION="${VERSION//$KERNELBRANCH/}"
 	VERSION="${VERSION//__/_}"
 
 	# kill process inside
@@ -869,9 +882,9 @@ closing_image (){
 	# write bootloader
 	LOOP=$(losetup -f)
 	losetup $LOOP $DEST/debian_rootfs.raw
-	cd /tmp
-	tar xvfz $BOOTDEST"/"$CHOOSEN_UBOOT
-	dd if=u-boot-sunxi-with-spl.bin of=$LOOP bs=1024 seek=8 status=noxfer
+	DEVICE=$LOOP dpkg -i $BOOTDEST"/"$CHOOSEN_UBOOT
+	CHOOSEN_UBOOT="${CHOOSEN_UBOOT//-.deb/}"
+	dpkg -r $CHOOSEN_UBOOT
 	sync
 	sleep 3
 	losetup -d $LOOP

@@ -1,0 +1,47 @@
+#! /bin/bash
+### BEGIN INIT INFO
+# Provides:          armhwinfo
+# Required-Start:    
+# Required-Stop:     glibc
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Get some info about hardware for some ARM single board computers and set some basic things
+### END INIT INFO
+
+
+case "$1" in
+	start)
+		# ARM
+		#for i in $( lsblk -idn -o NAME ); do
+		#	ROTATE=$(cat /sys/block/$i/queue/rotational)
+		#	# mechanical drives
+		#	if [ "$ROTATE" = 1 ]; then echo cfq  > /sys/block/$i/queue/scheduler;
+		#		-e "[\e[0;32m ok \x1B[0m] Setting cfg I/O scheduler for $i"
+		#	fi
+		#	# solid state drives
+		#	if [ "$ROTATE" = 0 ]; then echo noop  > /sys/block/$i/queue/scheduler;
+		#		echo -e "[\e[0;32m ok \x1B[0m] Setting noop I/O scheduler for $i"
+		#	fi
+		#done
+		
+		INTERRUPT=$(cat /proc/interrupts | grep "eth0")
+		# redistribute irq to dedicated core
+		if [ "$INTERRUPT" != "" ]; then
+			echo 2 > /proc/irq/$(cat /proc/interrupts | grep eth0 | cut -f 1 -d ":" | tr -d " ")/smp_affinity
+		fi
+		
+		echo -e "[\e[0;32m ok \x1B[0m] Starting ARM hardware info: Lime 2"
+		echo "Lime 2"  >> /var/run/machine.id
+		echo "" > /var/run/motd.dynamic
+		toilet -f standard -F metal "Lime 2" >> /var/run/motd.dynamic
+		echo "" >> /var/run/motd.dynamic
+		;;
+	stop|reload|restart|force-reload|status)
+		echo -e "[\e[0;32m ok \x1B[0m] Stopping ARM hardware info ..."
+		;;
+	*)
+		## If no parameters are given, print which are avaiable.
+		echo "Usage: $0 {start}"
+		exit 1
+		;;
+esac

@@ -34,11 +34,11 @@ GPG_PASS=""
 
 # numbers
 SDSIZE="2048"								# SD image size in MB
-REVISION="1.1"								# image release version
+REVISION="1.2"								# image release version
 USEALLCORES="yes"							# Use all CPU cores for compiling
 
 # kernel
-KERNEL_BRANCH="sunxi"						# sunxi, mainline
+KERNELBRANCH="sunxi"						# sunxi, mainline
 KERNEL_TAG="v3.19.3"						# which kernel version - valid only for mainline
 KERNEL_COMPILE="yes"						# force source compilation: yes / no
 KERNEL_CONFIGURE="yes"						# want to change my default configuration

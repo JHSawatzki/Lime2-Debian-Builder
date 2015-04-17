@@ -102,13 +102,13 @@ CHILKATSOURCE="chilkat-9.5.0-python-2.7-armv7a-hardfp-linux"
 #--------------------------------------------------------------------------------------------------------------------------------
 # common for mainline kernel-source
 #--------------------------------------------------------------------------------------------------------------------------------
-if [[ $KERNEL_BRANCH == "mainline" ]]; then
+if [[ $KERNELBRANCH == "mainline" ]]; then
 	# All next compilations are using mainline u-boot & kernel
 	LINUXKERNEL_REPOSITORY="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git"
 	LINUXSOURCE="linux-mainline"
 	LINUXCONFIG="linux-sunxi-next"
 else
-	LINUXKERNEL_REPOSITORY="https://github.com/dan-and/linux-sunxi"
+	LINUXKERNEL_REPOSITORY="https://github.com/JHSawatzki/linux-sunxi"
 	LINUXSOURCE="linux-sunxi"
 	LINUXCONFIG="linux-sunxi"
 fi
@@ -123,7 +123,7 @@ source $BUILDER/common.sh
 #--------------------------------------------------------------------------------------------------------------------------------
 # The name of the job
 #--------------------------------------------------------------------------------------------------------------------------------
-VERSION="lime2 Debian $REVISION wheezy $KERNEL_BRANCH"
+VERSION="lime2 Debian $REVISION wheezy $KERNELBRANCH"
 if [[ $U6PRO == "yes" ]]; then
 	VERSION=$VERSION" U6Pro"
 fi
