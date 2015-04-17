@@ -473,6 +473,8 @@ END
 		chroot_sdcard_lang "service php5-fpm stop"
 		chroot_sdcard_lang "service ntp stop"
 
+		#OpenSSH Config
+		#/bin/cp -f $BUILDER/config/sshd_config $SDCARD/etc/ssh/sshd_config
 		sed -e 's/^#Subsystem/Subsystem/g' -i $SDCARD/etc/ssh/sshd_config
 
 		cp $BUILDER/config/if-up.d/ntp $SDCARD/etc/network/if-up.d

@@ -28,6 +28,9 @@ rm -r /root/pyA20Lime2-0.2.0
 
 rm /etc/adjtime
 
+echo "Generating stronger Diffie-Hellman parameter..."
+openssl dhparam -out /etc/nginx/dhparam.pem 4096
+
 echo "Generating SSL cert..."
 echo -e "DE\nNRW\nWuelfrath\nTMES UG\nIT\ninfo@tmes.de\n" | openssl req -x509 -newkey rsa:2048 -keyout /etc/nginx/nginx.ssl.key -out /etc/nginx/nginx.ssl.crt -days 3650 -nodes
 
