@@ -30,10 +30,16 @@ case "$1" in
 			echo 2 > /proc/irq/$(cat /proc/interrupts | grep eth0 | cut -f 1 -d ":" | tr -d " ")/smp_affinity
 		fi
 		
+		DISTROID=$(lsb_release -s -i)
+		DISTROCODE=$(lsb_release -s -c)
+		#KERNELID=$(uname -r)
+		#KERNELDATE=$(uname -v |sed 's/.*EMPT //g' | awk '{print "date -d\""$1FS$2FS$3"\" +%e.%B.%Y"}' | bash)
+		
 		echo -e "[\e[0;32m ok \x1B[0m] Starting ARM hardware info: Lime 2"
 		echo "Lime 2"  >> /var/run/machine.id
 		echo "" > /var/run/motd.dynamic
 		toilet -f standard -F metal "Lime 2" >> /var/run/motd.dynamic
+		#echo "$DISTROID - $DISTROCODE - $KERNELID - $KERNELDATE" >> /var/run/motd.dynamic
 		echo "" >> /var/run/motd.dynamic
 		;;
 	stop|reload|restart|force-reload|status)

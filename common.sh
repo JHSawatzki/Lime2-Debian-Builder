@@ -1,9 +1,15 @@
 #!/bin/bash
 #
 # Based on the original work of Igor Pecovnik:
-# Copyright (c) 2014 Igor Pecovnik, igor.pecovnik@gma**.com
+# Copyright (c) 2015 Igor Pecovnik, igor.pecovnik@gma**.com
+#
+# This file is licensed under the terms of the GNU General Public
+# License version 2. This program is licensed "as is" without any
+# warranty of any kind, whether express or implied.
 #
 # Portions Copyright (c) 2015 Jan Henrik Sawatzki, info@tm**.de
+#
+
 #
 # Image build functions
 #
@@ -39,7 +45,7 @@ download_host_packages () {
 # Download sources from Github
 #--------------------------------------------------------------------------------------------------------------------------------
 fetch_from_github () {
-	echo "------ Downloading $2."
+	echo -e "[\e[0;32m ok \x1B[0m] Downloading $2"
 	if [ -d "$SOURCES/$2" ]; then
 		cd $SOURCES/$2
 		git pull
@@ -78,7 +84,10 @@ patching_sources() {
 		fi
 	#sunxi
 	else
-	
+		# SPI functionality
+		if [ "$(patch --dry-run -t -p1 < $SRC/lib/patch/spi.patch | grep previ)" == "" ]; then
+			patch --batch -f -p1 < $SRC/lib/patch/spi.patch
+		fi
 	fi
 
 	# compiler reverse patch. It has already been fixed.
@@ -141,13 +150,12 @@ END
 	cp u-boot-sunxi-with-spl.bin $BOOTDEST/$CHOOSEN_UBOOT/usr/lib/$CHOOSEN_UBOOT
 	
 	cd $BOOTDEST
-	CHOOSEN_UBOOT_DEB="linux-u-boot-$VER-lime2_"$REVISION"_"$KERNELBRANCH"-armhf".deb
-	if [ -f "$BOOTDEST/$CHOOSEN_UBOOT_DEB" ]; then
-		rm $BOOTDEST"/"$CHOOSEN_UBOOT_DEB
+	if [ -f "$BOOTDEST/$CHOOSEN_UBOOT".deb ]; then
+		rm $BOOTDEST"/"$CHOOSEN_UBOOT".deb"
 	fi
 	dpkg -b $CHOOSEN_UBOOT
 	rm -rf $CHOOSEN_UBOOT
-	CHOOSEN_UBOOT=$CHOOSEN_UBOOT_DEB
+	CHOOSEN_UBOOT="$CHOOSEN_UBOOT".deb
 
 	cd $SRC
 }
@@ -313,29 +321,21 @@ install_kernel () {
 		rm -rf $SDCARD/boot/dtb.old
 
 		# copy boot script and change it acordingly
-		cp $BUILDER/config/boot-next.cmd $SDCARD/boot/boot-next.cmd
-		sed -e "s/zImage/vmlinuz-$CHOOSEN_KERNEL/g" -i $SDCARD/boot/boot-next.cmd
-		sed -e "s/dtb/dtb\/$CHOOSEN_KERNEL/g" -i $SDCARD/boot/boot-next.cmd
-
-		#TODO uEnv
-		cp $BUILDER/config/uEnv.cubox-i $DEST/output/sdcard/boot/uEnv.txt
-		cp $SOURCES/$LINUXSOURCE/arch/arm/boot/dts/*.dtb $DEST/output/sdcard/boot
-		chroot_sdcard "chmod 755 /boot/uEnv.txt"
+		cp $BUILDER/config/boot.cmd $SDCARD/boot/boot.cmd
 
 		# compile boot script
-		mkimage -C none -A arm -T script -d $SDCARD/boot/boot-next.cmd $SDCARD/boot/boot.scr >> /dev/null
+		mkimage -C none -A arm -T script -d $SDCARD/boot/boot.cmd $SDCARD/boot/boot.scr >> /dev/null
 	else
 		fex2bin $BUILDER/config/script.fex $SDCARD/boot/script.bin
 
 		cp $BUILDER/config/boot.cmd $SDCARD/boot/boot.cmd
-		sed -e "s/zImage/vmlinuz-$CHOOSEN_KERNEL/g" -i $SDCARD/boot/boot.cmd
 
 		# compile boot script
 		mkimage -C none -A arm -T script -d $SDCARD/boot/boot.cmd $SDCARD/boot/boot.scr >> /dev/null
 	fi
 
 	# add linux firmwares to output image
-	#unzip $BUILDER/bin/linux-firmware.zip -d $SDCARD/lib/firmware
+	#unzip -q $BUILDER/bin/linux-firmware.zip -d $SDCARD/lib/firmware
 
 	#TODO custom, update, upgrade
 	#chroot_sdcard_lang "DEBIAN_FRONTEND=noninteractive apt-get -y update"
@@ -354,11 +354,11 @@ install_kernel () {
 
 
 #--------------------------------------------------------------------------------------------------------------------------------
-# Create Debian and Ubuntu image template if it does not exists
+# Create clean and fresh Debian image template if it does not exists
 #--------------------------------------------------------------------------------------------------------------------------------
 create_image_template (){
 	if [ ! -f "$ROOTFS/wheezy.raw.gz" ]; then
-		echo "------ Create image template"
+		echo -e "[\e[0;32m ok \x1B[0m] Debootstrap $RELEASE to image template"
 
 		# create image file
 		dd if=/dev/zero of=$ROOTFS/wheezy.raw bs=1M count=$SDSIZE status=noxfer
@@ -676,20 +676,18 @@ END
 		# install ramlog
 		cp $BUILDER/bin/ramlog_2.0.0_all.deb $SDCARD/tmp/
 		chroot_sdcard_lang "dpkg -i /tmp/ramlog_2.0.0_all.deb"
+		chroot_sdcard "service ramlog disable"
 		rm $SDCARD/tmp/ramlog_2.0.0_all.deb
 		sed -e 's/TMPFS_RAMFS_SIZE=/TMPFS_RAMFS_SIZE=512m/g' -i $SDCARD/etc/default/ramlog
 		sed -e 's/# Required-Start:    $remote_fs $time/# Required-Start:    $remote_fs $time ramlog/g' -i $SDCARD/etc/init.d/rsyslog
 		sed -e 's/# Required-Stop:     umountnfs $time/# Required-Stop:     umountnfs $time ramlog/g' -i $SDCARD/etc/init.d/rsyslog
 
-		# set console
-		chroot_sdcard "export TERM=linux"
-
 		# change time zone data
 		echo $TZDATA > $SDCARD/etc/timezone
-		chroot_sdcard_lang "dpkg-reconfigure -f noninteractive tzdata"
+		chroot_sdcard_lang "dpkg-reconfigure -f noninteractive tzdata >/dev/null 2>&1"
 
 		# set root password
-		chroot_sdcard "(echo $ROOTPWD;echo $ROOTPWD;) | passwd root"
+		chroot_sdcard "(echo $ROOTPWD;echo $ROOTPWD;) | passwd root >/dev/null 2>&1"
 
 		# change default I/O scheduler, noop for flash media, deadline for SSD, cfq for mechanical drive
 cat <<EOT >> $SDCARD/etc/sysfs.conf
