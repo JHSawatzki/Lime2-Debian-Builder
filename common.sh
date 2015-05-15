@@ -34,10 +34,17 @@ chroot_sdcard_lang () {
 #--------------------------------------------------------------------------------------------------------------------------------
 download_host_packages () {
 	apt-get -y -qq install debconf-utils
-
-	debconf-apt-progress -- apt-get -y install pv bc lzop zip binfmt-support bison build-essential ccache debootstrap flex gawk
-	debconf-apt-progress -- apt-get -y install gcc-arm-linux-gnueabihf lvm2 qemu-user-static u-boot-tools uuid-dev zlib1g-dev unzip
-	debconf-apt-progress -- apt-get -y install libusb-1.0-0 libusb-1.0-0-dev parted pkg-config expect gcc-arm-linux-gnueabi libncurses5-dev sqlite3
+	PAKETE="device-tree-compiler pv bc lzop zip binfmt-support bison build-essential ccache debootstrap flex gawk \
+	gcc-arm-linux-gnueabihf lvm2 qemu-user-static u-boot-tools uuid-dev zlib1g-dev unzip libusb-1.0-0 libusb-1.0-0-dev parted pkg-config \
+	expect gcc-arm-linux-gnueabi libncurses5-dev sqlite3"
+	for x in $PAKETE; do
+		if [ $(dpkg-query -W -f='${Status}' $x 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
+			INSTALL=$INSTALL" "$x
+		fi
+	done
+	if [[ $INSTALL != "" ]]; then
+		debconf-apt-progress -- apt-get -y install $INSTALL 
+	fi
 }
 
 
@@ -48,6 +55,11 @@ fetch_from_github () {
 	echo -e "[\e[0;32m ok \x1B[0m] Downloading $2"
 	if [ -d "$SOURCES/$2" ]; then
 		cd $SOURCES/$2
+		if [[ $2 == "linux-sunxi" ]]; then 
+			git checkout -f -q HEAD 
+		else
+			git checkout -f -q master
+		fi
 		git pull
 		cd $SRC
 	else
@@ -112,10 +124,12 @@ compile_uboot () {
 
 	if [[ $KERNELBRANCH == "sunxi" ]]; then
 		## patch mainline uboot configuration to boot with old kernels
-		echo "CONFIG_ARMV7_BOOT_SEC_DEFAULT=y" >> $SOURCES/$BOOTSOURCE/.config
-		echo "CONFIG_ARMV7_BOOT_SEC_DEFAULT=y" >> $SOURCES/$BOOTSOURCE/spl/.config
-		echo "CONFIG_OLD_SUNXI_KERNEL_COMPAT=y" >> $SOURCES/$BOOTSOURCE/.config
-		echo "CONFIG_OLD_SUNXI_KERNEL_COMPAT=y"	>> $SOURCES/$BOOTSOURCE/spl/.config
+		if [ "$(cat $SOURCES/$BOOTSOURCE/.config | grep CONFIG_ARMV7_BOOT_SEC_DEFAULT=y)" == "" ]; then
+			echo "CONFIG_ARMV7_BOOT_SEC_DEFAULT=y" >> $SOURCES/$BOOTSOURCE/.config
+			echo "CONFIG_ARMV7_BOOT_SEC_DEFAULT=y" >> $SOURCES/$BOOTSOURCE/spl/.config
+			echo "CONFIG_OLD_SUNXI_KERNEL_COMPAT=y" >> $SOURCES/$BOOTSOURCE/.config
+			echo "CONFIG_OLD_SUNXI_KERNEL_COMPAT=y" >> $SOURCES/$BOOTSOURCE/spl/.config
+		fi
 	fi
 
 	make $CTHREADS CONFIG_WATCHDOG=y CROSS_COMPILE=arm-linux-gnueabihf-
@@ -153,9 +167,15 @@ END
 	if [ -f "$BOOTDEST/$CHOOSEN_UBOOT".deb ]; then
 		rm $BOOTDEST"/"$CHOOSEN_UBOOT".deb"
 	fi
-	dpkg -b $CHOOSEN_UBOOT
+	dpkg -b $CHOOSEN_UBOOT >/dev/null 2>&1
 	rm -rf $CHOOSEN_UBOOT
 	CHOOSEN_UBOOT="$CHOOSEN_UBOOT".deb
+
+	FILESIZE=$(wc -c $BOOTDEST/$CHOOSEN_UBOOT'.deb' | cut -f 1 -d ' ')
+	if [ $FILESIZE -lt 50000 ]; then
+		echo -e "[\e[0;31m Error \x1B[0m] Building failed, check configuration."
+		exit
+	fi
 
 	cd $SRC
 }
@@ -199,10 +219,14 @@ compile_sunxi_tools () {
 		rm $DEST/bin2fex
 	fi
 	# for host
-	make -s clean && make -s fex2bin && make -s bin2fex
+	make -s clean >/dev/null 2>&1
+	make -s fex2bin >/dev/null 2>&1
+	make -s bin2fex >/dev/null 2>&1 
 	cp fex2bin bin2fex /usr/local/bin/
 	# for destination
-	make -s clean && make $CTHREADS fex2bin CC=arm-linux-gnueabihf-gcc && make $CTHREADS bin2fex CC=arm-linux-gnueabihf-gcccd
+	make -s clean >/dev/null 2>&1
+	make $CTHREADS 'fex2bin' CC=arm-linux-gnueabihf-gcc >/dev/null 2>&1
+	make $CTHREADS 'bin2fex' CC=arm-linux-gnueabihf-gcc >/dev/null 2>&1
 	
 	cp fex2bin $DEST/
 	cp bin2fex $DEST/
@@ -296,43 +320,36 @@ install_kernel () {
 	tar -xPf $KERNELDEST"/"$CHOOSEN_KERNEL
 	cp $BOOTDEST"/"$CHOOSEN_UBOOT /tmp/kernel/
 	mount --bind /tmp/kernel/ $SDCARD/tmp
-	chroot_sdcard "dpkg -i /tmp/*u-boot*.deb"
-	chroot_sdcard "dpkg -i /tmp/*image*.deb"
-	chroot_sdcard "dpkg -i /tmp/*headers*.deb"
+	chroot_sdcard "dpkg -i /tmp/*u-boot*.deb >/dev/null 2>&1"
+	chroot_sdcard "dpkg -i /tmp/*image*.deb >/dev/null 2>&1"
 	if [[ $KERNELBRANCH == "mainline" ]]; then
-		chroot_sdcard "dpkg -i /tmp/*dtb*.deb"
+		chroot_sdcard "dpkg -i /tmp/*dtb*.deb >/dev/null 2>&1"
 	fi
-
 	# name of archive is also kernel name
 	CHOOSEN_KERNEL="${CHOOSEN_KERNEL//-$KERNELBRANCH.tar/}"
 
+	# recompile headers scripts
+	chroot_sdcard "dpkg -i /tmp/*headers*.deb >/dev/null 2>&1"
+
 	echo "------ Compile headers scripts"
-	# patch scripts
 	cd $SDCARD/usr/src/linux-headers-$CHOOSEN_KERNEL
+	# patch scripts
 	patch -p1 < $BUILDER/patch/headers-debian-byteshift.patch
 	cd $SRC
 
 	# recompile headers scripts
 	chroot_sdcard_lang "cd /usr/src/linux-headers-$CHOOSEN_KERNEL && make headers_check; make headers_install ; make scripts"
 
-	# recreate boot.scr if using kernel for different board. Mainline only
-	if [[ $KERNELBRANCH == "mainline" ]]; then
-		# remove .old on new image
-		rm -rf $SDCARD/boot/dtb.old
+	# remove .old on new image
+	rm -rf $SDCARD/boot/dtb.old
 
-		# copy boot script and change it acordingly
-		cp $BUILDER/config/boot.cmd $SDCARD/boot/boot.cmd
+	fex2bin $BUILDER/config/script.fex $SDCARD/boot/script.bin
 
-		# compile boot script
-		mkimage -C none -A arm -T script -d $SDCARD/boot/boot.cmd $SDCARD/boot/boot.scr >> /dev/null
-	else
-		fex2bin $BUILDER/config/script.fex $SDCARD/boot/script.bin
+	# copy boot script and change it acordingly
+	cp $BUILDER/config/boot.cmd $SDCARD/boot/boot.cmd
 
-		cp $BUILDER/config/boot.cmd $SDCARD/boot/boot.cmd
-
-		# compile boot script
-		mkimage -C none -A arm -T script -d $SDCARD/boot/boot.cmd $SDCARD/boot/boot.scr >> /dev/null
-	fi
+	# compile boot script
+	mkimage -C none -A arm -T script -d $SDCARD/boot/boot.cmd $SDCARD/boot/boot.scr >> /dev/null
 
 	# add linux firmwares to output image
 	#unzip -q $BUILDER/bin/linux-firmware.zip -d $SDCARD/lib/firmware
@@ -599,7 +616,7 @@ END
 		chroot_sdcard "chmod +x /etc/init.d/tmeslogger"
 		chroot_sdcard "chmod +x /etc/init.d/processRebootAndShutdown"
 
-		chroot_sdcard "insserv processRebootAndShutdown >> /dev/null"
+		chroot_sdcard "update-rc.d processRebootAndShutdown defaults >/dev/null 2>&1"
 
 		#Web
 		cp -r $SRCTMESLOGGER/web/* $SDCARD/usr/share/nginx/www/
@@ -636,7 +653,9 @@ END
 		#Wheezy specific
 		#--------------------------------------------------------------------------------------------------------------------------------
 		# specifics packets
-		chroot_sdcard_lang "debconf-apt-progress -- apt-get -y install libnl-dev"
+		chroot_sdcard_lang "debconf-apt-progress -- apt-get -y -qq install libnl-dev thin-provisioning-tools"
+		# remove what's not needed
+		chroot_sdcard_lang "debconf-apt-progress -- apt-get -y autoremove"
 
 		# add serial console, root auto login
 		echo T0:2345:respawn:/sbin/getty -L ttyS0 115200 vt100 >> $SDCARD/etc/inittab
@@ -652,31 +671,28 @@ END
 		sed -e 's/6:23:respawn/#6:23:respawn/g' -i $SDCARD/etc/inittab
 		#--------------------------------------------------------------------------------------------------------------------------------
 
-		# remove what's not needed
-		chroot_sdcard_lang "debconf-apt-progress -- apt-get -y autoremove"
-
 		# scripts for autoresize at first boot
 		cp $BUILDER/scripts/resize2fs $SDCARD/etc/init.d/
 		cp $BUILDER/scripts/firstrun $SDCARD/etc/init.d/
 		chroot_sdcard "chmod +x /etc/init.d/firstrun"
 		chroot_sdcard "chmod +x /etc/init.d/resize2fs"
-		chroot_sdcard "insserv firstrun >> /dev/null"
+		chroot_sdcard "update-rc.d firstrun defaults >/dev/null 2>&1"
 
 		# install custom bashrc and hardware dependent motd
 		cat $BUILDER/scripts/bashrc >> $SDCARD/etc/bash.bashrc 
 		cp $BUILDER/scripts/armhwinfo $SDCARD/etc/init.d/
 		chroot_sdcard "chmod +x /etc/init.d/armhwinfo"
-		chroot_sdcard -c "insserv armhwinfo >> /dev/null" 
+		chroot_sdcard -c "update-rc.d armhwinfo defaults >/dev/null 2>&1" 
 
 		if [ -f "$SDCARD/etc/init.d/motd" ]; then
-			sed -e s,"# Update motd","insserv armhwinfo >> /dev/null",g -i $SDCARD/etc/init.d/motd
+			sed -e s,"# Update motd","update-rc.d armhwinfo defaults >/dev/null 2>&1",g -i $SDCARD/etc/init.d/motd
 			sed -e s,"uname -snrvm > /var/run/motd.dynamic","",g -i $SDCARD/etc/init.d/motd
 		fi
 
 		# install ramlog
 		cp $BUILDER/bin/ramlog_2.0.0_all.deb $SDCARD/tmp/
-		chroot_sdcard_lang "dpkg -i /tmp/ramlog_2.0.0_all.deb"
-		chroot_sdcard "service ramlog disable"
+		chroot_sdcard_lang "dpkg -i /tmp/ramlog_2.0.0_all.deb >/dev/null 2>&1"
+		chroot_sdcard "service ramlog disable >/dev/null 2>&1"
 		rm $SDCARD/tmp/ramlog_2.0.0_all.deb
 		sed -e 's/TMPFS_RAMFS_SIZE=/TMPFS_RAMFS_SIZE=512m/g' -i $SDCARD/etc/default/ramlog
 		sed -e 's/# Required-Start:    $remote_fs $time/# Required-Start:    $remote_fs $time ramlog/g' -i $SDCARD/etc/init.d/rsyslog
@@ -809,8 +825,8 @@ mount_existing_image (){
 # Saving build summary to the image
 #--------------------------------------------------------------------------------------------------------------------------------
 fingerprint_image (){
-	echo "------ Saving build summary to the image"
-	echo $1
+	echo -e "[\e[0;32m ok \x1B[0m] Fingerprinting"
+
 	echo "--------------------------------------------------------------------------------" > $1
 	echo "" >> $1
 	echo "" >> $1
@@ -832,11 +848,66 @@ fingerprint_image (){
 }
 
 
+shrinking_raw_image (){
+#--------------------------------------------------------------------------------------------------------------------------------
+# Shrink partition and image to real size with 3% space
+#--------------------------------------------------------------------------------------------------------------------------------
+RAWIMAGE=$1
+echo -e "[\e[0;32m ok \x1B[0m] Shrink partition and image to real size with 3% free space"
+# partition prepare
+
+LOOP=$(losetup -f)
+losetup $LOOP $RAWIMAGE
+PARTSTART=$(fdisk -l $LOOP | tail -1 | awk '{ print $2}')
+PARTSTART=$(($PARTSTART*512))
+sleep 1
+losetup -d $LOOP
+sleep 1
+losetup -o $PARTSTART $LOOP $RAWIMAGE
+sleep 1
+fsck -n $LOOP >/dev/null 2>&1
+sleep 1
+tune2fs -O ^has_journal $LOOP >/dev/null 2>&1
+sleep 1
+e2fsck -fy $LOOP >/dev/null 2>&1
+SIZE=$(tune2fs -l $LOOP | grep "Block count" | awk '{ print $NF}')
+FREE=$(tune2fs -l $LOOP | grep "Free blocks" | awk '{ print $NF}')
+UNITSIZE=$(tune2fs -l $LOOP | grep "Block size" | awk '{ print $NF}')
+
+# calculate new partition size and add 3% reserve
+NEWSIZE=$((($SIZE-$FREE)*$UNITSIZE/1024/1024))
+NEWSIZE=$(echo "scale=1; $NEWSIZE * 1.03" | bc -l)
+NEWSIZE=${NEWSIZE%.*}
+
+# resize partition to new size
+BLOCKSIZE=$(resize2fs $LOOP $NEWSIZE"M" | grep "The filesystem on" | awk '{ print $(NF-2)}')
+NEWSIZE=$(($BLOCKSIZE*$UNITSIZE/1024))
+sleep 1
+tune2fs -O has_journal $LOOP >/dev/null 2>&1
+tune2fs -o journal_data_writeback $LOOP >/dev/null 2>&1
+sleep 1
+losetup -d $LOOP
+
+# mount once again and create new partition
+sleep 2
+losetup $LOOP $RAWIMAGE
+PARTITIONS=$(($(fdisk -l $LOOP | grep $LOOP | wc -l)-1))
+((echo d; echo $PARTITIONS; echo n; echo p; echo ; echo ; echo "+"$NEWSIZE"K"; echo w;) | fdisk $LOOP)>/dev/null
+sleep 2
+# truncate the image
+TRUNCATE=$(fdisk -l $LOOP | tail -1 | awk '{ print $3}')
+TRUNCATE=$((($TRUNCATE+1)*512))
+
+truncate -s $TRUNCATE $RAWIMAGE >/dev/null 2>&1
+losetup -d $LOOP
+}
+
+
 #--------------------------------------------------------------------------------------------------------------------------------
 # Closing image and clean-up
 #--------------------------------------------------------------------------------------------------------------------------------
 closing_image (){
-	echo "------ Closing image"
+	echo "[\e[0;32m ok \x1B[0m] Closing image"
 
 	set +e
 	rm $SDCARD/usr/share/info/dir.old
@@ -874,17 +945,20 @@ closing_image (){
 	cp $SDCARD/root/readme.txt $DEST/
 	sleep 2
 	rm $SDCARD/usr/bin/qemu-arm-static
+	sleep 2
+	umount -l $SDCARD/boot > /dev/null 2>&1 || /bin/true
 	umount -l $SDCARD/
 	sleep 2
 	losetup -d $LOOP
 	rm -rf $SDCARD/
 
+	echo -e "[\e[0;32m ok \x1B[0m] Writing boot loader"
 	# write bootloader
 	LOOP=$(losetup -f)
 	losetup $LOOP $DEST/debian_rootfs.raw
-	DEVICE=$LOOP dpkg -i $BOOTDEST"/"$CHOOSEN_UBOOT
+	DEVICE=$LOOP dpkg -i $BOOTDEST"/"$CHOOSEN_UBOOT >/dev/null 2>&1
 	CHOOSEN_UBOOT="${CHOOSEN_UBOOT//-.deb/}"
-	dpkg -r $CHOOSEN_UBOOT
+	dpkg -r $CHOOSEN_UBOOT >/dev/null 2>&1
 	sync
 	sleep 3
 	losetup -d $LOOP
@@ -892,7 +966,12 @@ closing_image (){
 	sleep 2
 	mv $DEST/debian_rootfs.raw $DEST/$VERSION.raw
 	sync
+	sleep 2
+	# let's shrint it
+	shrinking_raw_image "$DEST/$VERSION.raw"
+	sleep 2
 	cd $DEST/
+	echo -e "[\e[0;32m ok \x1B[0m] Create and sign download ready ZIP archive"
 	# sign with PGP
 	if [[ $GPG_PASS != "" ]]; then
 		echo $GPG_PASS | gpg --passphrase-fd 0 --armor --detach-sign --batch --yes $VERSION.raw

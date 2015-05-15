@@ -1,5 +1,5 @@
 setenv bootdelay 0
-setenv bootargs console=tty1 root=/dev/mmcblk0p1 rootwait sunxi_ve_mem_reserve=0 sunxi_g2d_mem_reserve=0 sunxi_no_mali_mem_reserve sunxi_fb_mem_reserve=16 panic=10 consoleblank=0
+setenv bootargs console=tty1 root=/dev/mmcblk0p1 rootwait rootfstype=ext4 sunxi_ve_mem_reserve=0 sunxi_g2d_mem_reserve=0 sunxi_no_mali_mem_reserve sunxi_fb_mem_reserve=16 panic=10 consoleblank=0 enforcing=0 loglevel=1
 #--------------------------------------------------------------------------------------------------------------------------------
 # Boot loader script to boot with different boot methods for old and new kernel
 #--------------------------------------------------------------------------------------------------------------------------------

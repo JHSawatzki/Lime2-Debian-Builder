@@ -62,7 +62,7 @@ if [ ! -d "$SRCTMESLOGGER" ]; then
 fi
 
 # source tmeslogger scripts
-SRCTMESLOGGERSCRIPTS=$SRC/tmeslogger/scripts
+SRCTMESLOGGERSCRIPTS=$SRCTMESLOGGER/scripts
 
 
 #--------------------------------------------------------------------------------------------------------------------------------

@@ -13,6 +13,7 @@
 
 set -e
 
+device="/dev/"$(lsblk -idn -o NAME | grep mmc)"p1"
 N=/etc/init.d/resize2fs
 
 case "$1" in
@@ -22,8 +23,8 @@ case "$1" in
 		echo 500 > /sys/class/leds/green\:ph02\:led1/delay_off
 
 		echo "Resizing SD card file-system..." 
-		/sbin/resize2fs /dev/mmcblk0p1 2>/dev/null
-		/sbin/insserv -r resize2fs
+		/sbin/resize2fs $device 2>/dev/null
+		update-rc.d -f resize2fs remove >/dev/null 2>&1
 
 		echo none > /sys/class/leds/green\:ph02\:led1/trigger
 		echo 255 > /sys/class/leds/green\:ph02\:led1/brightness

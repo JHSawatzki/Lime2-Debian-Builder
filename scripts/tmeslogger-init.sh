@@ -41,5 +41,5 @@ sed -e "/secret/c\                'secret' => '$SLIM_SECRET'," -i /usr/share/ngi
 #Cron battery checker
 echo '* *     * * *   root    /usr/local/tmeslogger/scripts/batteryChecker.sh' >> /etc/crontab
 
-/sbin/insserv tmeslogger
-/sbin/insserv ftppush
+update-rc.d tmeslogger defaults >/dev/null 2>&1
+update-rc.d ftppush defaults >/dev/null 2>&1

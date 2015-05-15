@@ -39,7 +39,7 @@ USEALLCORES="yes"							# Use all CPU cores for compiling
 
 # kernel
 KERNELBRANCH="sunxi"						# sunxi, mainline
-KERNEL_TAG="v3.19.5"						# which kernel version - valid only for mainline
+KERNEL_TAG="v4.0.3"							# which kernel version - valid only for mainline
 KERNEL_COMPILE="yes"						# force source compilation: yes / no
 KERNEL_CONFIGURE="yes"						# want to change my default configuration
 KERNEL_CLEAN="yes"							# run MAKE clean before kernel compilation
