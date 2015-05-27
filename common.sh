@@ -456,7 +456,7 @@ create_image_template (){
 		#chroot_sdcard_lang "dpkg-reconfigure locales"
 
 		# install aditional packages
-		PAKETE="automake bash-completion bc build-essential cmake cpufrequtils curl device-tree-compiler dosfstools e2fsprogs evtest figlet fping git git-core haveged hddtemp hdparm htop i2c-tools iperf iotop less libtool libusb-1.0-0 libwrap0-dev libfuse2 libssl-dev logrotate lsof makedev module-init-tools nano ntp parted pkg-config pciutils pv python-smbus rsync screen stress sudo sysfsutils toilet u-boot-tools unzip usbutils wget"
+		PAKETE="automake btrfs-tools bash-completion bc build-essential cmake cpufrequtils curl device-tree-compiler dosfstools e2fsprogs evtest figlet fping git git-core haveged hddtemp hdparm htop i2c-tools iperf iotop less libtool libusb-1.0-0 libwrap0-dev libfuse2 libssl-dev logrotate lsof makedev module-init-tools nano ntp parted pkg-config pciutils pv python-smbus rsync screen stress sudo sysfsutils toilet u-boot-tools unzip usbutils wget"
 		chroot_sdcard_lang "debconf-apt-progress -- apt-get -y install $PAKETE"
 
 		# install console setup separate
